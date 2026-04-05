@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import {
-  calculationModes,
   defaultOnGridForm,
   roofOptions,
-  systemOptions,
   wizardSteps,
 } from '~/data/on-grid'
 import type { OnGridResult, WizardStep } from '~/types/on-grid'
@@ -20,29 +18,28 @@ useHead({
 })
 
 const form = reactive(defaultOnGridForm())
-const currentStep = ref<WizardStep>('system')
+const currentStep = ref<WizardStep>('location')
 const result = ref<OnGridResult | null>(null)
 const isCalculating = ref(false)
 const calculationError = ref('')
+const showAdvanced = ref(false)
 
 const activeStepIndex = computed(() => wizardSteps.findIndex((step) => step.key === currentStep.value))
-const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[1])
+const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[1]!)
 const monthlyConsumptionDerived = computed(() =>
   form.monthlyConsumption && form.monthlyConsumption > 0
     ? form.monthlyConsumption
     : form.monthlyBill / Math.max(form.electricityPrice, 0.01),
 )
-const canGoToResults = computed(
-  () =>
-    form.systemType === 'ongrid' &&
-    form.calculationMode === 'basic' &&
-    !!form.address &&
-    form.lat !== null &&
-    form.lng !== null &&
-    form.monthlyBill > 0 &&
-    form.electricityPrice > 0 &&
-    form.drawnAreaM2 > 0,
+
+const canProceedFromLocation = computed(
+  () => !!form.address && form.lat !== null && form.lng !== null && form.drawnAreaM2 > 0,
 )
+
+const canGoToResults = computed(
+  () => canProceedFromLocation.value && form.monthlyBill > 0 && form.electricityPrice > 0,
+)
+
 const maxMonthlyProduction = computed(() =>
   Math.max(...(result.value?.monthlySeries.map((entry) => entry.production) ?? [1]), 1),
 )
@@ -108,15 +105,13 @@ const runCalculation = async () => {
 const nextStep = async () => {
   const index = activeStepIndex.value
   const next = wizardSteps[index + 1]
-  if (!next) {
-    return
-  }
+  if (!next) return
+
+  if (currentStep.value === 'location' && !canProceedFromLocation.value) return
 
   if (next.key === 'results') {
     const ok = await runCalculation()
-    if (!ok) {
-      return
-    }
+    if (!ok) return
   }
 
   currentStep.value = next.key
@@ -133,9 +128,7 @@ const previousStep = () => {
 const jumpToStep = async (step: WizardStep) => {
   if (step === 'results') {
     const ok = await runCalculation()
-    if (!ok) {
-      return
-    }
+    if (!ok) return
   }
 
   currentStep.value = step
@@ -158,11 +151,10 @@ const updateArea = (areaM2: number) => {
     <section class="hero hero-blue">
       <div class="hero-copy">
         <p class="eyebrow">Gunes Enerjisi Simulatoru / v1.1</p>
-        <h1>Konum secimi Google Places, uretim tahmini PVGIS, alan secimi harita polygon akisi ile calisiyor.</h1>
+        <h1>Konum sec, cati alanini ciz, uretim ve tasarruf hesabi yap.</h1>
         <p class="hero-text">
-          Kullanici once il, ilce ya da adres arar; ardindan Google haritasi uzerinde panel
-          kurulacak alani cizer. Sonrasinda PVGIS verisiyle yillik uretim, tasarruf ve geri
-          donus suresi hesaplanir.
+          Adres arayarak konumunuzu secin, haritada panel kurulacak alani cizin,
+          PVGIS verisiyle yillik uretim, tasarruf ve geri donus suresi hesaplayin.
         </p>
         <div class="hero-badges">
           <span>Google Places</span>
@@ -214,54 +206,10 @@ const updateArea = (areaM2: number) => {
 
       <div class="content-grid">
         <div class="flow-column">
-          <section v-if="currentStep === 'system'" class="card">
-            <div class="section-head">
-              <p class="section-step">1. Sistem Secimi</p>
-              <h2>v1 kapsaminda yalnizca on-grid aktif</h2>
-            </div>
-
-            <div class="system-grid single-row">
-              <button
-                v-for="system in systemOptions"
-                :key="system.key"
-                class="system-card"
-                :class="{ active: form.systemType === system.key, disabled: !system.available }"
-                :disabled="!system.available"
-                type="button"
-                @click="form.systemType = system.key"
-              >
-                <span v-if="system.badge" class="system-badge">{{ system.badge }}</span>
-                <strong>{{ system.title }}</strong>
-                <span>{{ system.description }}</span>
-              </button>
-            </div>
-          </section>
-
-          <section v-if="currentStep === 'mode'" class="card">
-            <div class="section-head">
-              <p class="section-step">2. Hesaplama Turu</p>
-              <h2>Basit hesaplama ile hizli fizibilite</h2>
-            </div>
-
-            <div class="mode-grid">
-              <button
-                v-for="mode in calculationModes"
-                :key="mode.value"
-                class="mode-card"
-                :class="{ active: form.calculationMode === mode.value, disabled: !mode.available }"
-                :disabled="!mode.available"
-                type="button"
-                @click="form.calculationMode = mode.value"
-              >
-                <strong>{{ mode.title }}</strong>
-                <span>{{ mode.description }}</span>
-              </button>
-            </div>
-          </section>
-
+          <!-- STEP 1: Konum & Alan -->
           <section v-if="currentStep === 'location'" class="card">
             <div class="section-head">
-              <p class="section-step">3. Konum ve Alan</p>
+              <p class="section-step">1. Konum ve Alan</p>
               <h2>Il / ilce arayin, sonra cati veya arazi alanini poligon ile secin</h2>
             </div>
 
@@ -276,12 +224,32 @@ const updateArea = (areaM2: number) => {
                 @location-change="updateLocation"
               />
             </ClientOnly>
+
+            <div v-if="form.lat !== null" class="assumption-strip">
+              <div class="mini-stat">
+                <span>Konum</span>
+                <strong>{{ form.cityLabel || form.address }}</strong>
+              </div>
+              <div class="mini-stat">
+                <span>Koordinat</span>
+                <strong>{{ form.lat?.toFixed(4) }}, {{ form.lng?.toFixed(4) }}</strong>
+              </div>
+              <div class="mini-stat">
+                <span>Secilen alan</span>
+                <strong>{{ number(form.drawnAreaM2, 1) }} m2</strong>
+              </div>
+            </div>
+
+            <p v-if="!canProceedFromLocation" class="validation-hint">
+              Devam etmek icin adres secin ve haritada alan cizin.
+            </p>
           </section>
 
+          <!-- STEP 2: Bilgiler -->
           <section v-if="currentStep === 'details'" class="card">
             <div class="section-head">
-              <p class="section-step">4. Bilgi Girisi</p>
-              <h2>Elektrik ve sistem varsayimlarini girin</h2>
+              <p class="section-step">2. Bilgi Girisi</p>
+              <h2>Elektrik faturasi ve cati bilgilerinizi girin</h2>
             </div>
 
             <div class="form-grid">
@@ -319,7 +287,16 @@ const updateArea = (areaM2: number) => {
                 <span>Panel gucu (Wp)</span>
                 <input v-model.number="form.panelPower" max="620" min="550" step="5" type="number" />
               </label>
+            </div>
 
+            <!-- Gelismis Ayarlar -->
+            <div class="advanced-toggle">
+              <button class="text-btn" type="button" @click="showAdvanced = !showAdvanced">
+                {{ showAdvanced ? 'Gelismis ayarlari gizle' : 'Gelismis ayarlar' }}
+              </button>
+            </div>
+
+            <div v-if="showAdvanced" class="form-grid advanced-grid">
               <label>
                 <span>Panel alani (m2)</span>
                 <input v-model.number="form.panelArea" min="2" step="0.1" type="number" />
@@ -362,9 +339,10 @@ const updateArea = (areaM2: number) => {
             </div>
           </section>
 
+          <!-- STEP 3: Sonuc -->
           <section v-if="currentStep === 'results'" class="card">
             <div class="section-head">
-              <p class="section-step">5. Sonuc Dashboard</p>
+              <p class="section-step">3. Sonuc Dashboard</p>
               <h2>Google Places + PVGIS tabanli on-grid fizibilite</h2>
             </div>
 
@@ -495,7 +473,11 @@ const updateArea = (areaM2: number) => {
             <button
               v-if="currentStep !== 'results'"
               class="primary-btn"
-              :disabled="(currentStep === 'details' && !canGoToResults) || isCalculating"
+              :disabled="
+                (currentStep === 'location' && !canProceedFromLocation) ||
+                (currentStep === 'details' && !canGoToResults) ||
+                isCalculating
+              "
               type="button"
               @click="nextStep"
             >

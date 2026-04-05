@@ -1,21 +1,4 @@
-export type WizardStep = 'system' | 'mode' | 'location' | 'details' | 'results'
-
-export type SystemKey = 'ongrid' | 'offgrid' | 'hybrid'
-
-export interface SystemOption {
-  key: SystemKey
-  title: string
-  description: string
-  available: boolean
-  badge?: string
-}
-
-export interface CalculationModeOption {
-  value: 'basic' | 'advanced'
-  title: string
-  description: string
-  available: boolean
-}
+export type WizardStep = 'location' | 'details' | 'results'
 
 export interface RoofOption {
   value: string
@@ -25,8 +8,6 @@ export interface RoofOption {
 }
 
 export interface OnGridForm {
-  systemType: SystemKey
-  calculationMode: 'basic' | 'advanced'
   address: string
   cityLabel: string
   lat: number | null
