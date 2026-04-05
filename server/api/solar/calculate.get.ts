@@ -40,6 +40,7 @@ export default defineEventHandler(async (event) => {
 
   const electricityBuyPrice = optionalNumberParam(query.electricityBuyPrice)
   const electricitySellPrice = optionalNumberParam(query.electricitySellPrice)
+  const mountingPlace = query.mountingPlace === 'free' ? 'free' as const : 'building' as const
 
   return calculateSolarResult({
     address: String(query.address ?? ''),
@@ -63,6 +64,7 @@ export default defineEventHandler(async (event) => {
     installationCostPerKw: numberParam(query.installationCostPerKw, 44500),
     roofAngle,
     roofAspect,
+    mountingPlace,
     electricityBuyPrice,
     electricitySellPrice,
   })

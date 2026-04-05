@@ -7,6 +7,14 @@ interface PvgisMonthlyItem {
 }
 
 interface PvgisResponse {
+  inputs?: {
+    mounting_system?: {
+      fixed?: {
+        slope?: { value?: number; optimal?: boolean }
+        azimuth?: { value?: number; optimal?: boolean }
+      }
+    }
+  }
   outputs?: {
     monthly?: {
       fixed?: PvgisMonthlyItem[]
@@ -39,6 +47,7 @@ interface CalculateInput {
   installationCostPerKw: number
   roofAngle?: number
   roofAspect?: number
+  mountingPlace?: 'free' | 'building'
   electricityBuyPrice?: number
   electricitySellPrice?: number
 }
@@ -57,6 +66,9 @@ export const fetchPvgisProduction = async (params: {
   loss: number
   angle?: number
   aspect?: number
+  optimalAngles?: boolean
+  useHorizon?: boolean
+  mountingPlace?: 'free' | 'building'
 }) => {
   const queryParams: Record<string, string> = {
     lat: String(params.lat),
@@ -65,13 +77,19 @@ export const fetchPvgisProduction = async (params: {
     loss: String(params.loss),
     outputformat: 'json',
     browser: '0',
+    usehorizon: '1',
+    mountingplace: params.mountingPlace ?? 'building',
   }
 
-  if (params.angle !== undefined && params.angle > 0) {
-    queryParams.angle = String(params.angle)
-  }
-  if (params.aspect !== undefined) {
-    queryParams.aspect = String(params.aspect)
+  if (params.optimalAngles) {
+    queryParams.optimalangles = '1'
+  } else {
+    if (params.angle !== undefined && params.angle > 0) {
+      queryParams.angle = String(params.angle)
+    }
+    if (params.aspect !== undefined) {
+      queryParams.aspect = String(params.aspect)
+    }
   }
 
   const query = new URLSearchParams(queryParams)
@@ -79,10 +97,13 @@ export const fetchPvgisProduction = async (params: {
   const response = await $fetch<PvgisResponse>(`https://re.jrc.ec.europa.eu/api/v5_3/PVcalc?${query.toString()}`)
   const fixedMonthly = response.outputs?.monthly?.fixed ?? []
   const fixedTotals = response.outputs?.totals?.fixed
+  const fixedMounting = response.inputs?.mounting_system?.fixed
 
   return {
     yearlyProduction: toNumber(fixedTotals?.E_y),
     irradiation: toNumber(fixedTotals?.H_i_y),
+    optimalAngle: fixedMounting?.slope?.optimal ? (fixedMounting.slope.value ?? null) : null,
+    optimalAspect: fixedMounting?.azimuth?.optimal ? (fixedMounting.azimuth.value ?? null) : null,
     monthlySeries: fixedMonthly.map((item) => ({
       month: monthLabels[item.month - 1] ?? String(item.month),
       production: toNumber(item.E_m),
@@ -102,6 +123,8 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
   const areaLimitedPanelCount = Math.max(1, Math.floor(usableAreaM2 / input.panelArea))
   const areaLimitedPeakPower = (areaLimitedPanelCount * input.panelPower) / 1000
 
+  const useOptimalAngles = !input.roofAngle && input.roofAspect === undefined
+
   const initialPvgis = await fetchPvgisProduction({
     lat: input.lat,
     lng: input.lng,
@@ -109,6 +132,8 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
     loss: input.systemLoss,
     angle: input.roofAngle,
     aspect: input.roofAspect,
+    optimalAngles: useOptimalAngles,
+    mountingPlace: input.mountingPlace,
   })
 
   const pvYield = initialPvgis.yearlyProduction
@@ -123,6 +148,8 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
     loss: input.systemLoss,
     angle: input.roofAngle,
     aspect: input.roofAspect,
+    optimalAngles: useOptimalAngles,
+    mountingPlace: input.mountingPlace,
   })
 
   const monthlySeries: MonthlySeriesItem[] = finalPvgis.monthlySeries.map((item) => ({
@@ -170,6 +197,8 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
     installationCost,
     paybackYears,
     co2OffsetKg,
+    optimalAngle: finalPvgis.optimalAngle,
+    optimalAspect: finalPvgis.optimalAspect,
     selfSufficiencyRate,
     monthlySeries,
     cumulativeCashflow,

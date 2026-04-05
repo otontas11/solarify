@@ -8,6 +8,8 @@ export type SubscriberGroup = 'mesken' | 'kamu' | 'sanayi' | 'osb'
 
 export type RoofDirection = 'south' | 'north' | 'east' | 'west' | 'north-south' | 'east-west' | 'all'
 
+export type MountingPlace = 'free' | 'building'
+
 export interface PanelOption {
   value: string
   label: string
@@ -52,6 +54,7 @@ export interface OnGridForm {
   roofAngle: number
   coverFullBill: boolean
   coverFullRoof: boolean
+  mountingPlace: MountingPlace
   selectedPanel: string
   electricityBuyPrice: number
   electricitySellPrice: number
@@ -85,6 +88,8 @@ export interface OnGridResult {
   paybackYears: number
   co2OffsetKg: number
   selfSufficiencyRate: number
+  optimalAngle: number | null
+  optimalAspect: number | null
   monthlySeries: MonthlySeriesItem[]
   cumulativeCashflow: number[]
 }

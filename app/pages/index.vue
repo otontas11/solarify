@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   defaultOnGridForm,
+  mountingOptions,
   panelOptions,
   roofDirections,
   roofOptions,
@@ -8,7 +9,7 @@ import {
   systemCategories,
   wizardSteps,
 } from '~/data/on-grid'
-import type { CalculationMode, OnGridResult, RoofDirection, SubscriberGroup, SystemCategoryKey, WizardStep } from '~/types/on-grid'
+import type { CalculationMode, MountingPlace, OnGridResult, RoofDirection, SubscriberGroup, SystemCategoryKey, WizardStep } from '~/types/on-grid'
 
 useHead({
   title: 'Solarify | Google Places + PVGIS On-Grid Simulasyonu',
@@ -104,6 +105,7 @@ const runCalculation = async () => {
       installationCostPerKw: form.installationCostPerKw,
       roofAngle: form.roofAngle,
       roofDirection: form.roofDirection,
+      mountingPlace: form.mountingPlace,
     }
 
     if (form.calculationMode === 'advanced') {
@@ -426,7 +428,23 @@ const selectedCategoryMeta = computed(() =>
               </div>
             </div>
 
-            <!-- G) Checkboxlar -->
+            <!-- G) Kurulum Tipi -->
+            <div class="field-group">
+              <p class="field-group-title">Kurulum Tipi</p>
+              <div class="mounting-toggle">
+                <button
+                  v-for="opt in mountingOptions"
+                  :key="opt.value"
+                  type="button"
+                  :class="{ active: form.mountingPlace === opt.value }"
+                  @click="form.mountingPlace = opt.value as MountingPlace"
+                >
+                  {{ opt.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- H) Checkboxlar -->
             <div class="field-group">
               <label class="checkbox-field">
                 <input v-model="form.coverFullBill" type="checkbox" />
@@ -609,6 +627,11 @@ const selectedCategoryMeta = computed(() =>
                   <span>Tuketim karsilama</span>
                   <strong>%{{ number(result.selfSufficiencyRate, 1) }}</strong>
                   <small>Adres: {{ result.address }}</small>
+                </div>
+                <div v-if="result.optimalAngle !== null" class="result-tile">
+                  <span>PVGIS Optimal Aci</span>
+                  <strong>{{ number(result.optimalAngle, 1) }}°</strong>
+                  <small v-if="result.optimalAspect !== null">Azimuth: {{ number(result.optimalAspect, 1) }}°</small>
                 </div>
               </div>
 

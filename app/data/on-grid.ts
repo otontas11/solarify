@@ -1,4 +1,5 @@
 import type {
+  MountingPlace,
   OnGridForm,
   PanelOption,
   RoofOption,
@@ -84,6 +85,11 @@ export const roofOptions: RoofOption[] = [
   { value: 'flat', label: 'Duz Beton Teras Tipi Cati', coverageFactor: 0.78, costMultiplier: 1.04 },
 ]
 
+export const mountingOptions: { value: MountingPlace; label: string }[] = [
+  { value: 'building', label: 'Cati Ustu' },
+  { value: 'free', label: 'Arazi / Serbest' },
+]
+
 export const panelOptions: PanelOption[] = [
   { value: 'half-cut-108', label: 'Half-Cut 108PM12', power: 545, area: 2.58 },
   { value: 'half-cut-144', label: 'Half-Cut 144PMHC', power: 455, area: 2.17 },
@@ -112,6 +118,7 @@ export const defaultOnGridForm = (): OnGridForm => ({
   roofAngle: 0,
   coverFullBill: false,
   coverFullRoof: false,
+  mountingPlace: 'building',
   selectedPanel: 'half-cut-108',
   electricityBuyPrice: 1.6785,
   electricitySellPrice: 1.3433,
