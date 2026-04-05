@@ -2,9 +2,10 @@
 import {
   defaultOnGridForm,
   roofOptions,
+  systemCategories,
   wizardSteps,
 } from '~/data/on-grid'
-import type { OnGridResult, WizardStep } from '~/types/on-grid'
+import type { OnGridResult, SystemCategoryKey, WizardStep } from '~/types/on-grid'
 
 useHead({
   title: 'Solarify | Google Places + PVGIS On-Grid Simulasyonu',
@@ -18,7 +19,8 @@ useHead({
 })
 
 const form = reactive(defaultOnGridForm())
-const currentStep = ref<WizardStep>('location')
+const selectedCategory = ref<SystemCategoryKey | null>(null)
+const currentStep = ref<WizardStep>('category')
 const result = ref<OnGridResult | null>(null)
 const isCalculating = ref(false)
 const calculationError = ref('')
@@ -107,6 +109,7 @@ const nextStep = async () => {
   const next = wizardSteps[index + 1]
   if (!next) return
 
+  if (currentStep.value === 'category' && !selectedCategory.value) return
   if (currentStep.value === 'location' && !canProceedFromLocation.value) return
 
   if (next.key === 'results') {
@@ -126,6 +129,7 @@ const previousStep = () => {
 }
 
 const jumpToStep = async (step: WizardStep) => {
+  if (step !== 'category' && !selectedCategory.value) return
   if (step === 'results') {
     const ok = await runCalculation()
     if (!ok) return
@@ -144,6 +148,16 @@ const updateLocation = (payload: { lat: number; lng: number; address: string; ci
 const updateArea = (areaM2: number) => {
   form.drawnAreaM2 = areaM2
 }
+
+const selectCategory = (key: SystemCategoryKey) => {
+  const cat = systemCategories.find((c) => c.key === key)
+  if (!cat?.available) return
+  selectedCategory.value = key
+}
+
+const selectedCategoryMeta = computed(() =>
+  systemCategories.find((c) => c.key === selectedCategory.value),
+)
 </script>
 
 <template>
@@ -165,6 +179,10 @@ const updateArea = (areaM2: number) => {
 
       <aside class="hero-summary card">
         <p class="card-kicker">Canli Ozet</p>
+        <div class="metric-row">
+          <span>Sistem tipi</span>
+          <strong>{{ selectedCategoryMeta?.label || 'Secilmedi' }}</strong>
+        </div>
         <div class="metric-row">
           <span>Secilen konum</span>
           <strong>{{ form.cityLabel || 'Konum secilmedi' }}</strong>
@@ -193,7 +211,9 @@ const updateArea = (areaM2: number) => {
           :class="{
             active: currentStep === step.key,
             complete: index < activeStepIndex,
-            disabled: step.key === 'results' && !canGoToResults,
+            disabled:
+              (step.key === 'results' && !canGoToResults) ||
+              (step.key !== 'category' && !selectedCategory),
           }"
           type="button"
           @click="jumpToStep(step.key)"
@@ -206,10 +226,41 @@ const updateArea = (areaM2: number) => {
 
       <div class="content-grid">
         <div class="flow-column">
-          <!-- STEP 1: Konum & Alan -->
+          <!-- STEP 0: Kategori Secimi -->
+          <section v-if="currentStep === 'category'" class="card">
+            <div class="section-head">
+              <p class="section-step">1. Kategori</p>
+              <h2>Gunes enerjisi sistem tipini secin</h2>
+            </div>
+
+            <div class="category-grid">
+              <button
+                v-for="cat in systemCategories"
+                :key="cat.key"
+                class="system-card"
+                :class="{
+                  active: selectedCategory === cat.key,
+                  disabled: !cat.available,
+                }"
+                type="button"
+                @click="selectCategory(cat.key)"
+              >
+                <span class="category-icon">{{ cat.icon }}</span>
+                <strong>{{ cat.label }}</strong>
+                <span>{{ cat.description }}</span>
+                <span v-if="!cat.available" class="system-badge">Yakinda</span>
+              </button>
+            </div>
+
+            <p v-if="!selectedCategory" class="validation-hint">
+              Devam etmek icin bir sistem tipi secin.
+            </p>
+          </section>
+
+          <!-- STEP 2: Konum & Alan -->
           <section v-if="currentStep === 'location'" class="card">
             <div class="section-head">
-              <p class="section-step">1. Konum ve Alan</p>
+              <p class="section-step">2. Konum ve Alan</p>
               <h2>Il / ilce arayin, sonra cati veya arazi alanini poligon ile secin</h2>
             </div>
 
@@ -248,7 +299,7 @@ const updateArea = (areaM2: number) => {
           <!-- STEP 2: Bilgiler -->
           <section v-if="currentStep === 'details'" class="card">
             <div class="section-head">
-              <p class="section-step">2. Bilgi Girisi</p>
+              <p class="section-step">3. Bilgi Girisi</p>
               <h2>Elektrik faturasi ve cati bilgilerinizi girin</h2>
             </div>
 
@@ -342,7 +393,7 @@ const updateArea = (areaM2: number) => {
           <!-- STEP 3: Sonuc -->
           <section v-if="currentStep === 'results'" class="card">
             <div class="section-head">
-              <p class="section-step">3. Sonuc Dashboard</p>
+              <p class="section-step">4. Sonuc Dashboard</p>
               <h2>Google Places + PVGIS tabanli on-grid fizibilite</h2>
             </div>
 

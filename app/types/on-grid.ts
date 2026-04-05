@@ -1,4 +1,14 @@
-export type WizardStep = 'location' | 'details' | 'results'
+export type WizardStep = 'category' | 'location' | 'details' | 'results'
+
+export type SystemCategoryKey = 'on-grid' | 'off-grid' | 'agricultural' | 'heat-pump' | 'off-grid-flex' | 'ev-charger'
+
+export interface SystemCategory {
+  key: SystemCategoryKey
+  label: string
+  description: string
+  icon: string
+  available: boolean
+}
 
 export interface RoofOption {
   value: string

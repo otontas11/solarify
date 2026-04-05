@@ -162,7 +162,7 @@ label span,
 
 .stepper {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -280,6 +280,17 @@ label span,
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.category-icon {
+  font-size: 2rem;
+  line-height: 1;
 }
 
 .map-selector {
@@ -620,6 +631,7 @@ select:focus {
   .form-grid,
   .result-grid,
   .assumption-strip,
+  .category-grid,
   .map-meta {
     grid-template-columns: 1fr;
   }

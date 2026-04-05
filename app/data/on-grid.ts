@@ -1,10 +1,57 @@
 import type {
   OnGridForm,
   RoofOption,
+  SystemCategory,
   WizardStep,
 } from '~/types/on-grid'
 
+export const systemCategories: SystemCategory[] = [
+  {
+    key: 'on-grid',
+    label: 'ON GRID',
+    description: 'Sebekeye bagli sistemler icindir.',
+    icon: '🏠',
+    available: true,
+  },
+  {
+    key: 'off-grid',
+    label: 'OFF GRID',
+    description: 'Bataryali sebeke bagimsiz sistemler icindir.',
+    icon: '🔋',
+    available: false,
+  },
+  {
+    key: 'agricultural',
+    label: 'Tarimsal Sulama',
+    description: 'Tarimsal sulama sebekeli/sebekesiz sistemler icindir.',
+    icon: '🌾',
+    available: false,
+  },
+  {
+    key: 'heat-pump',
+    label: 'Isi Pompasi',
+    description: 'Isi pompasi sistemleri icin uygun cozumler.',
+    icon: '♨️',
+    available: false,
+  },
+  {
+    key: 'off-grid-flex',
+    label: 'OFF GRID (Esnek Panel)',
+    description: 'Tekne-Yat ve Karavanlara uygun sebekeden bagimsiz sistemler icindir.',
+    icon: '⛵',
+    available: false,
+  },
+  {
+    key: 'ev-charger',
+    label: 'Arac Sarj Istasyonu',
+    description: 'Arac sarj istasyonu sebeke bagli sistemler icindir.',
+    icon: '🚗',
+    available: false,
+  },
+]
+
 export const wizardSteps: { key: WizardStep; title: string; summary: string }[] = [
+  { key: 'category', title: 'Kategori', summary: 'Sistem tipini sec' },
   { key: 'location', title: 'Konum & Alan', summary: 'Adres ara, cati alanini ciz' },
   { key: 'details', title: 'Bilgiler', summary: 'Fatura ve sistem bilgilerini gir' },
   { key: 'results', title: 'Sonuc', summary: 'PVGIS tabanli fizibiliteyi gor' },
