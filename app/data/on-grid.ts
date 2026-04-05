@@ -20,7 +20,7 @@ export const systemCategories: SystemCategory[] = [
     label: 'OFF GRID',
     description: 'Bataryali sebeke bagimsiz sistemler icindir.',
     icon: '🔋',
-    available: false,
+    available: true,
   },
   {
     key: 'agricultural',
