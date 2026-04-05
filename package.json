@@ -10,10 +10,14 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.0.2",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "nuxt": "^4.4.2",
     "vue": "^3.5.31",
     "vue-router": "^5.0.4"
+  },
+  "devDependencies": {
+    "@types/google.maps": "^3.58.1"
   }
 }

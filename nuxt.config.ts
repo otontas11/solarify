@@ -2,5 +2,10 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  css: ['~/assets/css/main.css']
+  css: ['~/assets/css/main.css'],
+  runtimeConfig: {
+    public: {
+      googleMapsApiKey: process.env.NUXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
+    },
+  },
 })

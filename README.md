@@ -1,19 +1,34 @@
 # Solarify
 
-Nuxt tabanli bir gunes enerjisi simulasyon uygulamasi. Ilk fazda `On Grid` akisi icin CW Enerji simulatorunden esinlenen bir teklif ve fizibilite deneyimi kuruldu.
+On-grid gunes enerjisi simulasyonu icin Nuxt tabanli bir uygulama.
 
-## Bu surumde neler var
+Bu surumde:
 
-- Sistem secim ekrani ve fazlanabilir kart yapisi
-- `Basit` ve `Gelismis` hesaplama modlari
-- Lokasyon bazli verim katsayilari
-- Cati tipi, panel gucu, yon, egim ve golgelenme gibi parametreler
-- Finansal cikti: yillik tasarruf, sistem maliyeti, amortisman, 25 yil net kazanc
+- Google Places ile il / ilce / adres secimi
+- Google Map uzerinde polygon alan cizimi
+- Nuxt server proxy uzerinden PVGIS uretim tahmini
+- On-grid basit hesaplama dashboard'u
+
+## Kurulum
+
+```bash
+npm install
+```
+
+## Gerekli ortam degiskeni
+
+```bash
+NUXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_key_here
+```
+
+Google tarafinda en az su servislerin acik olmasi gerekir:
+
+- Maps JavaScript API
+- Places API
 
 ## Gelistirme
 
 ```bash
-npm install
 npm run dev
 ```
 
@@ -23,9 +38,11 @@ npm run dev
 npm run build
 ```
 
-## Sonraki dogruluk adimlari
+## API endpoint'leri
 
-- Il/ilce bazli gercek radyasyon verisi entegrasyonu
-- Urun kataloglariyla panel ve inverter secimi
-- Mahsuplasma ve tarife tipleri icin guncel regullasyon kurallari
-- Farkli sistem tipleri: off-grid, sulama, isi pompasi, EV sarj
+- `GET /api/pvgis`
+- `GET /api/solar/calculate`
+
+## Not
+
+PVGIS cagrisi tarayicidan dogrudan degil, Nuxt server endpoint'i uzerinden yapilir. Bu sayede frontend tarafinda Google Places + harita deneyimi korunurken uretim verisi de resmi kaynaktan alinabilir.

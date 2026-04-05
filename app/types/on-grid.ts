@@ -17,17 +17,6 @@ export interface CalculationModeOption {
   available: boolean
 }
 
-export interface CityPreset {
-  id: string
-  city: string
-  region: string
-  lat: number
-  lng: number
-  annualYield: number
-  irradiation: number
-  monthlyProductionFactors: number[]
-}
-
 export interface RoofOption {
   value: string
   label: string
@@ -38,8 +27,8 @@ export interface RoofOption {
 export interface OnGridForm {
   systemType: SystemKey
   calculationMode: 'basic' | 'advanced'
-  cityId: string | null
   address: string
+  cityLabel: string
   lat: number | null
   lng: number | null
   drawnAreaM2: number
@@ -62,8 +51,12 @@ export interface MonthlySeriesItem {
 }
 
 export interface OnGridResult {
-  locationLabel: string
-  selectedCity: CityPreset
+  address: string
+  cityLabel: string
+  lat: number
+  lng: number
+  pvYield: number
+  irradiation: number
   usableAreaM2: number
   areaLimitedPanelCount: number
   recommendedSystemSizeKw: number
