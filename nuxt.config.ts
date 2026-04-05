@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      googleMapsApiKey: process.env.NUXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
+      googleMapsApiKey: 'AIzaSyDwx1-vBQwxZ5qvyTXf1E4zBymYby3Kl64',
     },
   },
 })
