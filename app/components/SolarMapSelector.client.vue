@@ -81,9 +81,10 @@ const addVertexMarker = (position: { lat: number; lng: number }, index: number) 
   const m = new google.maps.Marker({
     map,
     position,
+    draggable: true,
     icon: {
       path: google.maps.SymbolPath.CIRCLE,
-      scale: 6,
+      scale: 8,
       fillColor: '#18A957',
       fillOpacity: 1,
       strokeColor: '#fff',
@@ -95,8 +96,33 @@ const addVertexMarker = (position: { lat: number; lng: number }, index: number) 
       fontSize: '10px',
       fontWeight: 'bold',
     },
+    cursor: 'grab',
     zIndex: 10,
   })
+
+  m.addListener('drag', () => {
+    const pos = m.getPosition()
+    if (!pos) return
+    pathPoints.value = pathPoints.value.map((p, i) =>
+      i === index ? { lat: pos.lat(), lng: pos.lng() } : p,
+    )
+    if (polygon) {
+      polygon.setPath(pathPoints.value)
+    }
+  })
+
+  m.addListener('dragend', () => {
+    const pos = m.getPosition()
+    if (!pos) return
+    pathPoints.value = pathPoints.value.map((p, i) =>
+      i === index ? { lat: pos.lat(), lng: pos.lng() } : p,
+    )
+    if (polygon) {
+      polygon.setPath(pathPoints.value)
+    }
+    updateArea()
+  })
+
   vertexMarkers.push(m)
 }
 
@@ -125,7 +151,7 @@ const ensurePolygon = async () => {
   polygon?.setMap(null)
   polygon = new google.maps.Polygon({
     paths: pathPoints.value,
-    editable: true,
+    editable: false,
     draggable: false,
     strokeColor: '#18A957',
     strokeOpacity: 1,
@@ -264,6 +290,7 @@ onMounted(async () => {
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
+      draggableCursor: 'crosshair',
     })
 
     if (hasInitialLocation) {
