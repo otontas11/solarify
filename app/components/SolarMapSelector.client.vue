@@ -31,41 +31,33 @@ const vertexMarkers: any[] = []
 
 const TURKEY_CENTER = { lat: 39.0, lng: 35.0 }
 
-/** Load Google Maps via vanilla script tag with callback */
+/** Load Google Maps via vanilla script tag */
 const loadGoogleMaps = (): Promise<void> => {
+  const win = window as any
+
+  // Already loaded
+  if (win.google?.maps?.Map) return Promise.resolve()
+
+  // If another instance is loading, poll for readiness
+  if (document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]')) {
+    return new Promise((resolve, reject) => {
+      const t0 = Date.now()
+      const poll = setInterval(() => {
+        if (win.google?.maps?.Map) { clearInterval(poll); resolve() }
+        else if (Date.now() - t0 > 15000) { clearInterval(poll); reject(new Error('Google Maps timeout')) }
+      }, 100)
+    })
+  }
+
   return new Promise((resolve, reject) => {
-    if (typeof google !== 'undefined' && google.maps && google.maps.Map) {
-      resolve()
-      return
-    }
+    const cbName = '_gmcb' + Date.now()
+    win[cbName] = () => { delete win[cbName]; resolve() }
 
-    const callbackName = '__gmapsCallback_' + Date.now()
-    ;(window as any)[callbackName] = () => {
-      delete (window as any)[callbackName]
-      resolve()
-    }
-
-    const existing = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]')
-    if (existing) {
-      // Script already in DOM — poll until google.maps is ready
-      const check = setInterval(() => {
-        if (typeof google !== 'undefined' && google.maps && google.maps.Map) {
-          clearInterval(check)
-          resolve()
-        }
-      }, 50)
-      setTimeout(() => { clearInterval(check); reject(new Error('Google Maps timeout')) }, 10000)
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&v=weekly&language=tr&region=TR&callback=${callbackName}`
-    script.async = true
-    script.onerror = () => {
-      delete (window as any)[callbackName]
-      reject(new Error('Google Maps script yuklenemedi'))
-    }
-    document.head.appendChild(script)
+    const s = document.createElement('script')
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&v=weekly&language=tr&region=TR&callback=${cbName}`
+    s.async = true
+    s.onerror = () => { delete win[cbName]; reject(new Error('Google Maps script yuklenemedi')) }
+    document.head.appendChild(s)
   })
 }
 
@@ -244,16 +236,27 @@ onMounted(async () => {
     return
   }
 
-  if (!mapRef.value) return
+  await nextTick()
+
+  if (!mapRef.value) {
+    errorMessage.value = 'Harita konteyneri bulunamadi.'
+    return
+  }
 
   try {
     await loadGoogleMaps()
+
+    const gmaps = (window as any).google?.maps
+    if (!gmaps?.Map) {
+      errorMessage.value = 'Google Maps API yuklendi ama Map sinifi bulunamadi.'
+      return
+    }
 
     const hasInitialLocation = props.lat !== null && props.lng !== null
     const initialCenter = hasInitialLocation ? { lat: props.lat!, lng: props.lng! } : TURKEY_CENTER
     const initialZoom = hasInitialLocation ? 20 : 6
 
-    map = new google.maps.Map(mapRef.value, {
+    map = new gmaps.Map(mapRef.value, {
       center: initialCenter,
       zoom: initialZoom,
       mapTypeId: 'satellite',
@@ -272,9 +275,10 @@ onMounted(async () => {
       await addPoint(event.latLng)
     })
 
-    await mountAutocomplete()
+    mountAutocomplete()
     ready.value = true
   } catch (error) {
+    console.error('[SolarMap] init error:', error)
     errorMessage.value = error instanceof Error ? error.message : 'Google Maps yuklenemedi.'
   }
 })

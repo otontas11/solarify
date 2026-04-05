@@ -56,7 +56,6 @@ select {
   margin-bottom: 24px;
 }
 
-.hero-blue .hero-copy,
 .card {
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -66,6 +65,9 @@ select {
 
 .hero-copy {
   padding: 36px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
   background:
     linear-gradient(135deg, rgba(15, 39, 71, 0.98), rgba(23, 55, 99, 0.94)),
     var(--primary);
