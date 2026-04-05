@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import {
   defaultOnGridForm,
+  panelOptions,
+  roofDirections,
   roofOptions,
+  subscriberGroups,
   systemCategories,
   wizardSteps,
 } from '~/data/on-grid'
-import type { OnGridResult, SystemCategoryKey, WizardStep } from '~/types/on-grid'
+import type { CalculationMode, OnGridResult, RoofDirection, SubscriberGroup, SystemCategoryKey, WizardStep } from '~/types/on-grid'
 
 useHead({
   title: 'Solarify | Google Places + PVGIS On-Grid Simulasyonu',
@@ -26,8 +29,17 @@ const isCalculating = ref(false)
 const calculationError = ref('')
 const showAdvanced = ref(false)
 
+const selectPanel = (panelValue: string) => {
+  form.selectedPanel = panelValue
+  const panel = panelOptions.find((p) => p.value === panelValue)
+  if (panel) {
+    form.panelPower = panel.power
+    form.panelArea = panel.area
+  }
+}
+
 const activeStepIndex = computed(() => wizardSteps.findIndex((step) => step.key === currentStep.value))
-const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[1]!)
+const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[0]!)
 const monthlyConsumptionDerived = computed(() =>
   form.monthlyConsumption && form.monthlyConsumption > 0
     ? form.monthlyConsumption
@@ -74,24 +86,33 @@ const runCalculation = async () => {
   calculationError.value = ''
 
   try {
+    const queryParams: Record<string, string | number> = {
+      address: form.address,
+      cityLabel: form.cityLabel,
+      lat: form.lat!,
+      lng: form.lng!,
+      drawnAreaM2: form.drawnAreaM2,
+      roofType: form.roofType,
+      monthlyBill: form.monthlyBill,
+      electricityPrice: form.electricityPrice,
+      monthlyConsumption: form.monthlyConsumption ?? '',
+      panelPower: form.panelPower,
+      panelArea: form.panelArea,
+      inverterEfficiency: form.inverterEfficiency,
+      systemLoss: form.systemLoss,
+      annualDegradation: form.annualDegradation,
+      installationCostPerKw: form.installationCostPerKw,
+      roofAngle: form.roofAngle,
+      roofDirection: form.roofDirection,
+    }
+
+    if (form.calculationMode === 'advanced') {
+      queryParams.electricityBuyPrice = form.electricityBuyPrice
+      queryParams.electricitySellPrice = form.electricitySellPrice
+    }
+
     result.value = await $fetch<OnGridResult>('/api/solar/calculate', {
-      query: {
-        address: form.address,
-        cityLabel: form.cityLabel,
-        lat: form.lat,
-        lng: form.lng,
-        drawnAreaM2: form.drawnAreaM2,
-        roofType: form.roofType,
-        monthlyBill: form.monthlyBill,
-        electricityPrice: form.electricityPrice,
-        monthlyConsumption: form.monthlyConsumption ?? '',
-        panelPower: form.panelPower,
-        panelArea: form.panelArea,
-        inverterEfficiency: form.inverterEfficiency,
-        systemLoss: form.systemLoss,
-        annualDegradation: form.annualDegradation,
-        installationCostPerKw: form.installationCostPerKw,
-      },
+      query: queryParams,
     })
 
     return true
@@ -300,79 +321,221 @@ const selectedCategoryMeta = computed(() =>
           <section v-if="currentStep === 'details'" class="card">
             <div class="section-head">
               <p class="section-step">3. Bilgi Girisi</p>
-              <h2>Elektrik faturasi ve cati bilgilerinizi girin</h2>
+              <h2>Hesaplama modunu secin ve bilgilerinizi girin</h2>
             </div>
 
-            <div class="form-grid">
-              <label>
-                <span>Aylik fatura (TL)</span>
-                <input v-model.number="form.monthlyBill" min="1" step="100" type="number" />
-              </label>
-
-              <label>
-                <span>Elektrik birim fiyati (TL/kWh)</span>
-                <input v-model.number="form.electricityPrice" min="0.1" step="0.1" type="number" />
-              </label>
-
-              <label>
-                <span>Aylik tuketim (kWh) - opsiyonel</span>
-                <input
-                  v-model.number="form.monthlyConsumption"
-                  min="0"
-                  placeholder="Bos birakilirsa faturadan hesaplanir"
-                  step="10"
-                  type="number"
-                />
-              </label>
-
-              <label>
-                <span>Cati tipi</span>
-                <select v-model="form.roofType">
-                  <option v-for="option in roofOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                <span>Panel gucu (Wp)</span>
-                <input v-model.number="form.panelPower" max="620" min="550" step="5" type="number" />
-              </label>
-            </div>
-
-            <!-- Gelismis Ayarlar -->
-            <div class="advanced-toggle">
-              <button class="text-btn" type="button" @click="showAdvanced = !showAdvanced">
-                {{ showAdvanced ? 'Gelismis ayarlari gizle' : 'Gelismis ayarlar' }}
+            <!-- A) Mod Secimi -->
+            <div class="mode-toggle">
+              <button
+                type="button"
+                :class="{ active: form.calculationMode === 'simple' }"
+                @click="form.calculationMode = 'simple'"
+              >
+                Basit
+              </button>
+              <button
+                type="button"
+                :class="{ active: form.calculationMode === 'advanced' }"
+                @click="form.calculationMode = 'advanced'"
+              >
+                Gelismis
               </button>
             </div>
 
-            <div v-if="showAdvanced" class="form-grid advanced-grid">
-              <label>
-                <span>Panel alani (m2)</span>
-                <input v-model.number="form.panelArea" min="2" step="0.1" type="number" />
-              </label>
+            <!-- B) Abone Grubu -->
+            <div class="field-group">
+              <p class="field-group-title">Abone Grubu</p>
+              <div class="subscriber-grid">
+                <button
+                  v-for="group in subscriberGroups"
+                  :key="group.value"
+                  type="button"
+                  :class="{ active: form.subscriberGroup === group.value }"
+                  @click="form.subscriberGroup = group.value as SubscriberGroup"
+                >
+                  <span class="subscriber-icon">{{ group.icon }}</span>
+                  <strong>{{ group.label }}</strong>
+                </button>
+              </div>
+            </div>
 
-              <label>
-                <span>Inverter verimi (%)</span>
-                <input v-model.number="form.inverterEfficiency" max="100" min="90" step="1" type="number" />
-              </label>
+            <!-- C) Cati Cephesi -->
+            <div class="field-group">
+              <p class="field-group-title">Cati Cephesi</p>
+              <div class="direction-grid">
+                <button
+                  v-for="dir in roofDirections"
+                  :key="dir.value"
+                  type="button"
+                  :class="{ active: form.roofDirection === dir.value }"
+                  @click="form.roofDirection = dir.value as RoofDirection"
+                >
+                  {{ dir.label }}
+                </button>
+              </div>
+            </div>
 
-              <label>
-                <span>Sistem kaybi (%)</span>
-                <input v-model.number="form.systemLoss" max="30" min="0" step="1" type="number" />
-              </label>
+            <!-- D) Cati Tipi -->
+            <div class="field-group">
+              <p class="field-group-title">Cati Tipi</p>
+              <div class="roof-type-grid">
+                <button
+                  v-for="option in roofOptions"
+                  :key="option.value"
+                  type="button"
+                  :class="{ active: form.roofType === option.value }"
+                  @click="form.roofType = option.value"
+                >
+                  <strong>{{ option.label }}</strong>
+                  <span>Kaplama: %{{ number(option.coverageFactor * 100, 0) }}</span>
+                </button>
+              </div>
+            </div>
 
-              <label>
-                <span>Yillik degradasyon (%)</span>
-                <input v-model.number="form.annualDegradation" max="3" min="0" step="0.1" type="number" />
-              </label>
+            <!-- E) Aylik Elektrik Faturasi — Range Slider -->
+            <div class="field-group">
+              <div class="range-field">
+                <div class="range-header">
+                  <span>Aylik Elektrik Faturasi</span>
+                  <strong>{{ currency(form.monthlyBill) }}</strong>
+                </div>
+                <input
+                  v-model.number="form.monthlyBill"
+                  type="range"
+                  min="500"
+                  max="50000"
+                  step="100"
+                />
+              </div>
+            </div>
 
-              <label>
-                <span>Kurulum maliyeti (TL/kWp)</span>
-                <input v-model.number="form.installationCostPerKw" min="10000" step="500" type="number" />
+            <!-- F) Cati Acisi — Range Slider -->
+            <div class="field-group">
+              <div class="range-field">
+                <div class="range-header">
+                  <span>Cati Acisi</span>
+                  <strong>{{ form.roofAngle }}°</strong>
+                </div>
+                <input
+                  v-model.number="form.roofAngle"
+                  type="range"
+                  min="0"
+                  max="45"
+                  step="1"
+                />
+              </div>
+            </div>
+
+            <!-- G) Checkboxlar -->
+            <div class="field-group">
+              <label class="checkbox-field">
+                <input v-model="form.coverFullBill" type="checkbox" />
+                <span>Faturanin tamamini karsilamak istiyorum</span>
+              </label>
+              <label class="checkbox-field">
+                <input v-model="form.coverFullRoof" type="checkbox" />
+                <span>Catimin tamamini kaplamak istiyorum</span>
               </label>
             </div>
+
+            <!-- H) Gelismis Mod Ek Alanlar -->
+            <template v-if="form.calculationMode === 'advanced'">
+              <!-- Panel Secimi -->
+              <div class="field-group">
+                <p class="field-group-title">Gunes Paneli</p>
+                <div class="panel-grid">
+                  <button
+                    v-for="panel in panelOptions"
+                    :key="panel.value"
+                    type="button"
+                    :class="{ active: form.selectedPanel === panel.value }"
+                    @click="selectPanel(panel.value)"
+                  >
+                    <strong>{{ panel.label }}</strong>
+                    <span>{{ panel.power }}Wp / {{ panel.area }} m2</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Fiyat ve Tuketim Inputlari -->
+              <div class="advanced-fields">
+                <label>
+                  <span>Elektrik Alis Fiyati (TL/kWh)</span>
+                  <input v-model.number="form.electricityBuyPrice" min="0" step="0.01" type="number" />
+                </label>
+
+                <label>
+                  <span>Elektrik Satis Fiyati (TL/kWh)</span>
+                  <input v-model.number="form.electricitySellPrice" min="0" step="0.01" type="number" />
+                </label>
+
+                <label>
+                  <span>Dagitim Bedeli (Opsiyonel)</span>
+                  <input
+                    v-model.number="form.distributionFee"
+                    min="0"
+                    placeholder="0.76"
+                    step="0.01"
+                    type="number"
+                  />
+                </label>
+
+                <label>
+                  <span>Yillik Elektrik Tuketimi (kWh)</span>
+                  <input
+                    v-model.number="form.yearlyConsumption"
+                    min="0"
+                    placeholder="Bos birakilirsa faturadan hesaplanir"
+                    step="100"
+                    type="number"
+                  />
+                </label>
+
+                <label>
+                  <span>Aylik Fatura Tutari (TL)</span>
+                  <input v-model.number="form.monthlyBill" min="1" step="100" type="number" />
+                </label>
+
+                <label>
+                  <span>Elektrik Birim Fiyati (TL/kWh)</span>
+                  <input v-model.number="form.electricityPrice" min="0.1" step="0.1" type="number" />
+                </label>
+              </div>
+
+              <!-- Teknik Ayarlar -->
+              <div class="advanced-toggle">
+                <button class="text-btn" type="button" @click="showAdvanced = !showAdvanced">
+                  {{ showAdvanced ? 'Teknik ayarlari gizle' : 'Teknik ayarlar' }}
+                </button>
+              </div>
+
+              <div v-if="showAdvanced" class="form-grid advanced-grid">
+                <label>
+                  <span>Panel alani (m2)</span>
+                  <input v-model.number="form.panelArea" min="2" step="0.1" type="number" />
+                </label>
+
+                <label>
+                  <span>Inverter verimi (%)</span>
+                  <input v-model.number="form.inverterEfficiency" max="100" min="90" step="1" type="number" />
+                </label>
+
+                <label>
+                  <span>Sistem kaybi (%)</span>
+                  <input v-model.number="form.systemLoss" max="30" min="0" step="1" type="number" />
+                </label>
+
+                <label>
+                  <span>Yillik degradasyon (%)</span>
+                  <input v-model.number="form.annualDegradation" max="3" min="0" step="0.1" type="number" />
+                </label>
+
+                <label>
+                  <span>Kurulum maliyeti (TL/kWp)</span>
+                  <input v-model.number="form.installationCostPerKw" min="10000" step="500" type="number" />
+                </label>
+              </div>
+            </template>
 
             <div class="assumption-strip">
               <div class="mini-stat">

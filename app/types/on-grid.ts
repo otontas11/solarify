@@ -2,6 +2,19 @@ export type WizardStep = 'category' | 'location' | 'details' | 'results'
 
 export type SystemCategoryKey = 'on-grid' | 'off-grid' | 'agricultural' | 'heat-pump' | 'off-grid-flex' | 'ev-charger'
 
+export type CalculationMode = 'simple' | 'advanced'
+
+export type SubscriberGroup = 'mesken' | 'kamu' | 'sanayi' | 'osb'
+
+export type RoofDirection = 'south' | 'north' | 'east' | 'west' | 'north-south' | 'east-west' | 'all'
+
+export interface PanelOption {
+  value: string
+  label: string
+  power: number
+  area: number
+}
+
 export interface SystemCategory {
   key: SystemCategoryKey
   label: string
@@ -33,6 +46,17 @@ export interface OnGridForm {
   systemLoss: number
   annualDegradation: number
   installationCostPerKw: number
+  calculationMode: CalculationMode
+  subscriberGroup: SubscriberGroup
+  roofDirection: RoofDirection
+  roofAngle: number
+  coverFullBill: boolean
+  coverFullRoof: boolean
+  selectedPanel: string
+  electricityBuyPrice: number
+  electricitySellPrice: number
+  distributionFee: number | null
+  yearlyConsumption: number | null
 }
 
 export interface MonthlySeriesItem {

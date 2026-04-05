@@ -1,5 +1,6 @@
 import type {
   OnGridForm,
+  PanelOption,
   RoofOption,
   SystemCategory,
   WizardStep,
@@ -57,11 +58,36 @@ export const wizardSteps: { key: WizardStep; title: string; summary: string }[] 
   { key: 'results', title: 'Sonuc', summary: 'PVGIS tabanli fizibiliteyi gor' },
 ]
 
+export const subscriberGroups: { value: string; label: string; icon: string }[] = [
+  { value: 'mesken', label: 'Mesken', icon: '🏠' },
+  { value: 'kamu', label: 'Kamu', icon: '🏛️' },
+  { value: 'sanayi', label: 'Sanayi', icon: '🏭' },
+  { value: 'osb', label: 'OSB', icon: '⚙️' },
+]
+
+export const roofDirections: { value: string; label: string; aspect: number }[] = [
+  { value: 'south', label: 'Guney', aspect: 0 },
+  { value: 'north', label: 'Kuzey', aspect: 180 },
+  { value: 'east', label: 'Dogu', aspect: -90 },
+  { value: 'west', label: 'Bati', aspect: 90 },
+  { value: 'north-south', label: 'Kuzey & Guney', aspect: 0 },
+  { value: 'east-west', label: 'Dogu & Bati', aspect: 0 },
+  { value: 'all', label: 'Hepsi', aspect: 0 },
+]
+
 export const roofOptions: RoofOption[] = [
-  { value: 'tile', label: 'Kiremit Cati', coverageFactor: 0.72, costMultiplier: 1.08 },
-  { value: 'metal', label: 'Trapez Sac', coverageFactor: 0.84, costMultiplier: 1 },
-  { value: 'flat', label: 'Duz Cati', coverageFactor: 0.78, costMultiplier: 1.04 },
-  { value: 'ground', label: 'Arazi Kurulumu', coverageFactor: 0.9, costMultiplier: 0.97 },
+  { value: 'sandwich', label: 'Sandvic Panel Cati', coverageFactor: 0.84, costMultiplier: 1.0 },
+  { value: 'trapez', label: 'Trapez Cati', coverageFactor: 0.84, costMultiplier: 1.0 },
+  { value: 'aluminium-sandwich', label: 'Aluminyum Sandvic Panel Cati', coverageFactor: 0.82, costMultiplier: 1.05 },
+  { value: 'kenet', label: 'Kenet Cati', coverageFactor: 0.80, costMultiplier: 1.08 },
+  { value: 'membrane', label: 'Membran Cati', coverageFactor: 0.78, costMultiplier: 1.04 },
+  { value: 'flat', label: 'Duz Beton Teras Tipi Cati', coverageFactor: 0.78, costMultiplier: 1.04 },
+]
+
+export const panelOptions: PanelOption[] = [
+  { value: 'half-cut-108', label: 'Half-Cut 108PM12', power: 545, area: 2.58 },
+  { value: 'half-cut-144', label: 'Half-Cut 144PMHC', power: 455, area: 2.17 },
+  { value: 'half-cut-132', label: 'Half-Cut 132PM12', power: 670, area: 3.1 },
 ]
 
 export const defaultOnGridForm = (): OnGridForm => ({
@@ -70,14 +96,25 @@ export const defaultOnGridForm = (): OnGridForm => ({
   lat: null,
   lng: null,
   drawnAreaM2: 0,
-  roofType: 'metal',
+  roofType: 'sandwich',
   monthlyBill: 4500,
   electricityPrice: 3.2,
   monthlyConsumption: null,
-  panelPower: 585,
-  panelArea: 2.8,
+  panelPower: 545,
+  panelArea: 2.58,
   inverterEfficiency: 96,
   systemLoss: 14,
   annualDegradation: 0.5,
   installationCostPerKw: 44500,
+  calculationMode: 'simple',
+  subscriberGroup: 'mesken',
+  roofDirection: 'south',
+  roofAngle: 0,
+  coverFullBill: false,
+  coverFullRoof: false,
+  selectedPanel: 'half-cut-108',
+  electricityBuyPrice: 1.6785,
+  electricitySellPrice: 1.3433,
+  distributionFee: null,
+  yearlyConsumption: null,
 })

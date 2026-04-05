@@ -37,6 +37,10 @@ interface CalculateInput {
   systemLoss: number
   annualDegradation: number
   installationCostPerKw: number
+  roofAngle?: number
+  roofAspect?: number
+  electricityBuyPrice?: number
+  electricitySellPrice?: number
 }
 
 const monthLabels = ['Oca', 'Sub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Agu', 'Eyl', 'Eki', 'Kas', 'Ara']
@@ -51,15 +55,26 @@ export const fetchPvgisProduction = async (params: {
   lng: number
   peakPower: number
   loss: number
+  angle?: number
+  aspect?: number
 }) => {
-  const query = new URLSearchParams({
+  const queryParams: Record<string, string> = {
     lat: String(params.lat),
     lon: String(params.lng),
     peakpower: String(params.peakPower),
     loss: String(params.loss),
     outputformat: 'json',
     browser: '0',
-  })
+  }
+
+  if (params.angle !== undefined && params.angle > 0) {
+    queryParams.angle = String(params.angle)
+  }
+  if (params.aspect !== undefined) {
+    queryParams.aspect = String(params.aspect)
+  }
+
+  const query = new URLSearchParams(queryParams)
 
   const response = await $fetch<PvgisResponse>(`https://re.jrc.ec.europa.eu/api/v5_3/PVcalc?${query.toString()}`)
   const fixedMonthly = response.outputs?.monthly?.fixed ?? []
@@ -92,6 +107,8 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
     lng: input.lng,
     peakPower: 1,
     loss: input.systemLoss,
+    angle: input.roofAngle,
+    aspect: input.roofAspect,
   })
 
   const pvYield = initialPvgis.yearlyProduction
@@ -104,6 +121,8 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
     lng: input.lng,
     peakPower: feasibleSystemSizeKw,
     loss: input.systemLoss,
+    angle: input.roofAngle,
+    aspect: input.roofAspect,
   })
 
   const monthlySeries: MonthlySeriesItem[] = finalPvgis.monthlySeries.map((item) => ({
@@ -114,7 +133,11 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
 
   const yearlyProduction = finalPvgis.yearlyProduction
   const monthlyAverageProduction = yearlyProduction / 12
-  const yearlySavings = Math.min(yearlyProduction, yearlyConsumption) * input.electricityPrice
+  const buyPrice = input.electricityBuyPrice ?? input.electricityPrice
+  const sellPrice = input.electricitySellPrice ?? input.electricityPrice
+  const selfConsumed = Math.min(yearlyProduction, yearlyConsumption)
+  const exported = Math.max(yearlyProduction - yearlyConsumption, 0)
+  const yearlySavings = selfConsumed * buyPrice + exported * sellPrice
   const installationCost = feasibleSystemSizeKw * input.installationCostPerKw * input.roofCostMultiplier
   const paybackYears = installationCost / Math.max(yearlySavings, 1)
   const selfSufficiencyRate = Math.min((yearlyProduction / Math.max(yearlyConsumption, 1)) * 100, 100)

@@ -1,5 +1,5 @@
 import { getQuery } from 'h3'
-import { roofOptions } from '~/data/on-grid'
+import { roofDirections, roofOptions } from '~/data/on-grid'
 import { calculateSolarResult } from '../../utils/pvgis'
 
 const numberParam = (value: unknown, fallback?: number) => {
@@ -15,6 +15,12 @@ const numberParam = (value: unknown, fallback?: number) => {
   throw createError({ statusCode: 400, statusMessage: 'Sayisal parametre gecersiz' })
 }
 
+const optionalNumberParam = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
 
@@ -23,9 +29,17 @@ export default defineEventHandler(async (event) => {
   const monthlyBill = numberParam(query.monthlyBill)
   const electricityPrice = numberParam(query.electricityPrice)
   const drawnAreaM2 = numberParam(query.drawnAreaM2)
-  const roofType = String(query.roofType ?? 'metal')
+  const roofType = String(query.roofType ?? 'sandwich')
   const monthlyConsumptionRaw = query.monthlyConsumption
-  const roof = roofOptions.find((item) => item.value === roofType) ?? roofOptions[1]
+  const roof = roofOptions.find((item) => item.value === roofType) ?? roofOptions[0]
+
+  const roofAngle = optionalNumberParam(query.roofAngle)
+  const roofDirection = String(query.roofDirection ?? 'south')
+  const directionMeta = roofDirections.find((d) => d.value === roofDirection)
+  const roofAspect = directionMeta?.aspect
+
+  const electricityBuyPrice = optionalNumberParam(query.electricityBuyPrice)
+  const electricitySellPrice = optionalNumberParam(query.electricitySellPrice)
 
   return calculateSolarResult({
     address: String(query.address ?? ''),
@@ -41,11 +55,15 @@ export default defineEventHandler(async (event) => {
       monthlyConsumptionRaw === undefined || monthlyConsumptionRaw === null || monthlyConsumptionRaw === ''
         ? null
         : numberParam(monthlyConsumptionRaw),
-    panelPower: numberParam(query.panelPower, 585),
-    panelArea: numberParam(query.panelArea, 2.8),
+    panelPower: numberParam(query.panelPower, 545),
+    panelArea: numberParam(query.panelArea, 2.58),
     inverterEfficiency: numberParam(query.inverterEfficiency, 96),
     systemLoss: numberParam(query.systemLoss, 14),
     annualDegradation: numberParam(query.annualDegradation, 0.5),
     installationCostPerKw: numberParam(query.installationCostPerKw, 44500),
+    roofAngle,
+    roofAspect,
+    electricityBuyPrice,
+    electricitySellPrice,
   })
 })
