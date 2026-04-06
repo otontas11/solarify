@@ -689,6 +689,46 @@ select:focus {
   font-size: 0.78rem;
 }
 
+.tariff-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tariff-input-wrap .tariff-input {
+  width: 90px;
+  min-height: 34px;
+  padding: 4px 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--primary);
+  text-align: right;
+}
+
+.tariff-input-wrap .tariff-input:focus {
+  outline: 2px solid rgba(15, 39, 71, 0.14);
+  border-color: rgba(15, 39, 71, 0.34);
+}
+
+.tariff-input-wrap .tariff-unit {
+  font-size: 0.78rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.estimate-note {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(246, 184, 0, 0.10);
+  color: #875f00;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
 .mounting-toggle {
   display: flex;
   gap: 10px;

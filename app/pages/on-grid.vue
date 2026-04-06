@@ -145,16 +145,30 @@
 
             <!-- Tarife Bilgisi -->
             <div class="tariff-info">
-              <p class="tariff-info-title">Guncel EPDK Tarifesi (Nisan 2026)</p>
+              <p class="tariff-info-title">Guncel Tarife ({{ currentTariff.label }})</p>
               <div class="tariff-info-grid">
-                <span>Enerji bedeli:</span>
-                <strong>{{ number(currentTariff.energyPrice, 2) }} TL/kWh{{ currentTariff.energyTiers ? ' (1. kademe)' : '' }}</strong>
-                <span>Dagitim bedeli:</span>
-                <strong>{{ number(currentTariff.distributionFee, 2) }} TL/kWh</strong>
-                <span>Toplam alis:</span>
-                <strong>{{ number(currentTariff.energyPrice + currentTariff.distributionFee, 2) }} TL/kWh</strong>
+                <span>Birim fiyat:</span>
+                <div class="tariff-input-wrap">
+                  <input
+                      v-model.number="form.electricityBuyPrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      class="tariff-input"
+                  />
+                  <span class="tariff-unit">TL/kWh</span>
+                </div>
                 <span>Satis fiyati:</span>
-                <strong>{{ number(currentTariff.sellPrice, 2) }} TL/kWh</strong>
+                <div class="tariff-input-wrap">
+                  <input
+                      v-model.number="form.electricitySellPrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      class="tariff-input"
+                  />
+                  <span class="tariff-unit">TL/kWh</span>
+                </div>
               </div>
             </div>
 
@@ -281,10 +295,6 @@
                   <input v-model.number="form.electricitySellPrice" min="0" step="0.01" type="number" />
                 </label>
                 <label>
-                  <span>Dagitim Bedeli (TL/kWh)</span>
-                  <input v-model.number="form.distributionFee" min="0" step="0.01" type="number" />
-                </label>
-                <label>
                   <span>Yillik Elektrik Zam Orani (%)</span>
                   <input v-model.number="form.annualEscalationRate" min="0" max="50" step="1" type="number" />
                 </label>
@@ -389,9 +399,8 @@
                   <span>Yillik tasarruf</span>
                   <strong>{{ currency(result.yearlySavings) }}</strong>
                   <small class="savings-breakdown">
-                    Ozt: {{ currency(result.savingsBreakdown.selfConsumptionSaving) }}
-                    + Dag: {{ currency(result.savingsBreakdown.distributionSaving) }}
-                    + Sat: {{ currency(result.savingsBreakdown.exportIncome) }}
+                    Oztuketim: {{ currency(result.savingsBreakdown.selfConsumptionSaving) }}
+                    + Satis: {{ currency(result.savingsBreakdown.exportIncome) }}
                   </small>
                 </div>
                 <div class="result-tile">
@@ -505,27 +514,40 @@
         <aside class="results-column">
           <section class="card sticky-card">
             <div class="section-head">
-              <p class="section-step">Mimari</p>
-              <h2>Canli entegrasyon omurgasi</h2>
+              <p class="section-step">Anlik Tahmin</p>
+              <h2>On fizibilite sonuclari</h2>
             </div>
 
             <div class="result-grid one-col">
               <div class="result-tile">
-                <span>Konum secimi</span>
-                <strong>Google Places</strong>
-                <small>Il / ilce / adres arama icin resmi Places widget kullaniliyor</small>
+                <span>Panel sayisi</span>
+                <strong>{{ number(liveEstimate.panelCount) }} adet</strong>
               </div>
               <div class="result-tile">
-                <span>Harita alan secimi</span>
-                <strong>Google Maps Polygon</strong>
-                <small>Secilen alan m2 olarak hesaba giriyor</small>
+                <span>Sistem gucu</span>
+                <strong>{{ number(liveEstimate.systemSizeKw, 2) }} kWp</strong>
               </div>
               <div class="result-tile">
-                <span>Uretim kaynagi</span>
-                <strong>PVGIS Proxy</strong>
-                <small>Nuxt server endpoint ile PVGIS verisi cekiliyor</small>
+                <span>Yillik uretim</span>
+                <strong>{{ number(liveEstimate.yearlyProduction) }} kWh</strong>
+              </div>
+              <div class="result-tile">
+                <span>Yillik tasarruf</span>
+                <strong>{{ currency(liveEstimate.yearlySavings) }}</strong>
+              </div>
+              <div class="result-tile">
+                <span>Kurulum maliyeti</span>
+                <strong>{{ currency(liveEstimate.installationCost) }}</strong>
+              </div>
+              <div class="result-tile">
+                <span>Geri donus suresi</span>
+                <strong>{{ liveEstimate.paybackYears === Infinity ? '—' : number(liveEstimate.paybackYears, 1) + ' yil' }}</strong>
               </div>
             </div>
+
+            <p class="estimate-note">
+              {{ result ? 'PVGIS verimi kullaniliyor' : 'Turkiye ortalamasi (1400 kWh/kWp) ile tahmini hesap' }}
+            </p>
           </section>
         </aside>
       </div>
@@ -589,11 +611,9 @@ watch(
   (group) => {
     const t = tariffs[group]
     if (!t) return
-    form.electricityBuyPrice = t.energyPrice
+    form.electricityBuyPrice = t.unitPrice
     form.electricitySellPrice = t.sellPrice
-    form.distributionFee = t.distributionFee
-    // KDV dahil ortalama birim fiyat (basit mod icin)
-    form.electricityPrice = Number(((t.energyPrice + t.distributionFee) * (1 + t.vatRate)).toFixed(2))
+    form.electricityPrice = t.unitPrice
   },
 )
 
@@ -619,6 +639,22 @@ const canProceedFromLocation = computed(() => hasValidLocation.value)
 const canGoToResults = computed(
   () => canProceedFromLocation.value && form.monthlyBill > 0 && form.electricityPrice > 0,
 )
+
+const liveEstimate = computed(() => {
+  const pvYield = result.value?.pvYield ?? 1400
+  const usableArea = form.drawnAreaM2 * (roofMeta.value.coverageFactor ?? 0.84)
+  const panelCount = form.panelArea > 0 ? Math.floor(usableArea / form.panelArea) : 0
+  const systemSizeKw = (panelCount * form.panelPower) / 1000
+  const yearlyProduction = systemSizeKw * pvYield
+  const selfConsumption = Math.min(yearlyProduction, monthlyConsumptionDerived.value * 12)
+  const exported = yearlyProduction - selfConsumption
+  const yearlySavings = selfConsumption * form.electricityBuyPrice + exported * form.electricitySellPrice
+  const costMultiplier = roofMeta.value.costMultiplier ?? 1
+  const installationCost = systemSizeKw * form.installationCostPerKw * costMultiplier
+  const paybackYears = yearlySavings > 0 ? installationCost / yearlySavings : Infinity
+
+  return { panelCount, systemSizeKw, yearlyProduction, yearlySavings, installationCost, paybackYears }
+})
 
 const maxMonthlyProduction = computed(() =>
   Math.max(...(result.value?.monthlySeries.map((entry) => entry.production) ?? [1]), 1),
@@ -675,15 +711,8 @@ const runCalculation = async () => {
 
     queryParams.electricityBuyPrice = form.electricityBuyPrice
     queryParams.electricitySellPrice = form.electricitySellPrice
-    queryParams.distributionFee = form.distributionFee
     queryParams.annualEscalationRate = form.annualEscalationRate
     queryParams.subscriberGroup = form.subscriberGroup
-
-    // Kademeli tarife bilgisi
-    const t = tariffs[form.subscriberGroup]
-    if (t?.energyTiers) {
-      queryParams.energyTiers = JSON.stringify(t.energyTiers)
-    }
 
     result.value = await $fetch<OnGridResult>('/api/solar/calculate', {
       query: queryParams,

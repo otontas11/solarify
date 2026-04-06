@@ -50,10 +50,7 @@ interface CalculateInput {
   mountingPlace?: 'free' | 'building'
   electricityBuyPrice?: number
   electricitySellPrice?: number
-  distributionFee?: number
   annualEscalationRate?: number
-  subscriberGroup?: string
-  energyTiers?: { limit: number; price: number }[]
 }
 
 const monthLabels = ['Oca', 'Sub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Agu', 'Eyl', 'Eki', 'Kas', 'Ara']
@@ -165,36 +162,18 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
 
   const yearlyProduction = finalPvgis.yearlyProduction
   const monthlyAverageProduction = yearlyProduction / 12
-  const distributionFee = input.distributionFee ?? 0
   const escalationRate = (input.annualEscalationRate ?? 15) / 100
 
-  // Kademeli tarife hesabi (mesken icin)
-  let buyPrice = input.electricityBuyPrice ?? input.electricityPrice
-  if (input.energyTiers && input.energyTiers.length > 0) {
-    const monthlyKwh = monthlyConsumption
-    let totalCost = 0
-    let remaining = monthlyKwh
-    let prevLimit = 0
-    for (const tier of input.energyTiers) {
-      const tierWidth = tier.limit === Infinity ? remaining : tier.limit - prevLimit
-      const consumed = Math.min(remaining, tierWidth)
-      totalCost += consumed * tier.price
-      remaining -= consumed
-      prevLimit = tier.limit
-      if (remaining <= 0) break
-    }
-    buyPrice = monthlyKwh > 0 ? totalCost / monthlyKwh : buyPrice
-  }
-
+  // Birim fiyat (enerji + dagitim + vergi dahil toplam)
+  const buyPrice = input.electricityBuyPrice ?? input.electricityPrice
   const sellPrice = input.electricitySellPrice ?? input.electricityPrice
   const selfConsumed = Math.min(yearlyProduction, yearlyConsumption)
   const exported = Math.max(yearlyProduction - yearlyConsumption, 0)
 
-  // Tasarruf kirilimi (ilk yil)
+  // Tasarruf (ilk yil)
   const selfConsumptionSaving = selfConsumed * buyPrice
-  const distributionSaving = selfConsumed * distributionFee
   const exportIncome = exported * sellPrice
-  const yearlySavings = selfConsumptionSaving + distributionSaving + exportIncome
+  const yearlySavings = selfConsumptionSaving + exportIncome
 
   const installationCost = feasibleSystemSizeKw * input.installationCostPerKw * input.roofCostMultiplier
   const selfSufficiencyRate = Math.min((yearlyProduction / Math.max(yearlyConsumption, 1)) * 100, 100)
@@ -208,7 +187,7 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
 
   for (let year = 1; year <= 25; year += 1) {
     const degradedProduction = yearlyProduction * Math.pow(1 - input.annualDegradation / 100, year - 1)
-    const escalatedBuyPrice = (buyPrice + distributionFee) * Math.pow(1 + escalationRate, year - 1)
+    const escalatedBuyPrice = buyPrice * Math.pow(1 + escalationRate, year - 1)
     const escalatedSellPrice = sellPrice * Math.pow(1 + escalationRate, year - 1)
     const yearSelfConsumed = Math.min(degradedProduction, yearlyConsumption)
     const yearExported = Math.max(degradedProduction - yearlyConsumption, 0)
@@ -250,7 +229,7 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
     cumulativeCashflow,
     savingsBreakdown: {
       selfConsumptionSaving,
-      distributionSaving,
+      distributionSaving: 0,
       exportIncome,
     },
   }
