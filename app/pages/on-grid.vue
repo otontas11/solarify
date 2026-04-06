@@ -643,10 +643,16 @@ const canGoToResults = computed(
 const liveEstimate = computed(() => {
   const pvYield = result.value?.pvYield ?? 1400
   const usableArea = form.drawnAreaM2 * (roofMeta.value.coverageFactor ?? 0.84)
-  const panelCount = form.panelArea > 0 ? Math.floor(usableArea / form.panelArea) : 0
+  const areaLimitedPeakPower = form.panelArea > 0
+    ? (Math.floor(usableArea / form.panelArea) * form.panelPower) / 1000
+    : 0
+  const yearlyConsumption = monthlyConsumptionDerived.value * 12
+  const recommendedSizeKw = pvYield > 0 ? yearlyConsumption / pvYield : 0
+  const feasibleSizeKw = Math.min(recommendedSizeKw, areaLimitedPeakPower)
+  const panelCount = form.panelPower > 0 ? Math.max(1, Math.ceil((feasibleSizeKw * 1000) / form.panelPower)) : 0
   const systemSizeKw = (panelCount * form.panelPower) / 1000
   const yearlyProduction = systemSizeKw * pvYield
-  const selfConsumption = Math.min(yearlyProduction, monthlyConsumptionDerived.value * 12)
+  const selfConsumption = Math.min(yearlyProduction, yearlyConsumption)
   const exported = yearlyProduction - selfConsumption
   const yearlySavings = selfConsumption * form.electricityBuyPrice + exported * form.electricitySellPrice
   const costMultiplier = roofMeta.value.costMultiplier ?? 1
