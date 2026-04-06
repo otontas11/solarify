@@ -50,6 +50,10 @@ interface CalculateInput {
   mountingPlace?: 'free' | 'building'
   electricityBuyPrice?: number
   electricitySellPrice?: number
+  distributionFee?: number
+  annualEscalationRate?: number
+  subscriberGroup?: string
+  energyTiers?: { limit: number; price: number }[]
 }
 
 const monthLabels = ['Oca', 'Sub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Agu', 'Eyl', 'Eki', 'Kas', 'Ara']
@@ -95,6 +99,7 @@ export const fetchPvgisProduction = async (params: {
   const query = new URLSearchParams(queryParams)
 
   const response = await $fetch<PvgisResponse>(`https://re.jrc.ec.europa.eu/api/v5_3/PVcalc?${query.toString()}`)
+  console.log("pvgis sonucu ",response)
   const fixedMonthly = response.outputs?.monthly?.fixed ?? []
   const fixedTotals = response.outputs?.totals?.fixed
   const fixedMounting = response.inputs?.mounting_system?.fixed
@@ -160,22 +165,63 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
 
   const yearlyProduction = finalPvgis.yearlyProduction
   const monthlyAverageProduction = yearlyProduction / 12
-  const buyPrice = input.electricityBuyPrice ?? input.electricityPrice
+  const distributionFee = input.distributionFee ?? 0
+  const escalationRate = (input.annualEscalationRate ?? 15) / 100
+
+  // Kademeli tarife hesabi (mesken icin)
+  let buyPrice = input.electricityBuyPrice ?? input.electricityPrice
+  if (input.energyTiers && input.energyTiers.length > 0) {
+    const monthlyKwh = monthlyConsumption
+    let totalCost = 0
+    let remaining = monthlyKwh
+    let prevLimit = 0
+    for (const tier of input.energyTiers) {
+      const tierWidth = tier.limit === Infinity ? remaining : tier.limit - prevLimit
+      const consumed = Math.min(remaining, tierWidth)
+      totalCost += consumed * tier.price
+      remaining -= consumed
+      prevLimit = tier.limit
+      if (remaining <= 0) break
+    }
+    buyPrice = monthlyKwh > 0 ? totalCost / monthlyKwh : buyPrice
+  }
+
   const sellPrice = input.electricitySellPrice ?? input.electricityPrice
   const selfConsumed = Math.min(yearlyProduction, yearlyConsumption)
   const exported = Math.max(yearlyProduction - yearlyConsumption, 0)
-  const yearlySavings = selfConsumed * buyPrice + exported * sellPrice
+
+  // Tasarruf kirilimi (ilk yil)
+  const selfConsumptionSaving = selfConsumed * buyPrice
+  const distributionSaving = selfConsumed * distributionFee
+  const exportIncome = exported * sellPrice
+  const yearlySavings = selfConsumptionSaving + distributionSaving + exportIncome
+
   const installationCost = feasibleSystemSizeKw * input.installationCostPerKw * input.roofCostMultiplier
-  const paybackYears = installationCost / Math.max(yearlySavings, 1)
   const selfSufficiencyRate = Math.min((yearlyProduction / Math.max(yearlyConsumption, 1)) * 100, 100)
   const co2OffsetKg = yearlyProduction * 0.42
 
+  // 25 yillik kumulative nakit akisi (yillik zam ve degradasyon ile)
   let cumulative = -installationCost
+  let paybackYears = installationCost / Math.max(yearlySavings, 1) // fallback
+  let paybackFound = false
   const cumulativeCashflow: number[] = []
-  for (let year = 1; year <= 10; year += 1) {
+
+  for (let year = 1; year <= 25; year += 1) {
     const degradedProduction = yearlyProduction * Math.pow(1 - input.annualDegradation / 100, year - 1)
-    cumulative += Math.min(degradedProduction, yearlyConsumption) * input.electricityPrice
+    const escalatedBuyPrice = (buyPrice + distributionFee) * Math.pow(1 + escalationRate, year - 1)
+    const escalatedSellPrice = sellPrice * Math.pow(1 + escalationRate, year - 1)
+    const yearSelfConsumed = Math.min(degradedProduction, yearlyConsumption)
+    const yearExported = Math.max(degradedProduction - yearlyConsumption, 0)
+    const yearSavings = yearSelfConsumed * escalatedBuyPrice + yearExported * escalatedSellPrice
+    const prevCumulative = cumulative
+    cumulative += yearSavings
     cumulativeCashflow.push(cumulative)
+
+    if (!paybackFound && cumulative >= 0) {
+      // Lineer interpolasyon
+      paybackYears = year - 1 + Math.abs(prevCumulative) / yearSavings
+      paybackFound = true
+    }
   }
 
   return {
@@ -202,5 +248,10 @@ export const calculateSolarResult = async (input: CalculateInput): Promise<OnGri
     selfSufficiencyRate,
     monthlySeries,
     cumulativeCashflow,
+    savingsBreakdown: {
+      selfConsumptionSaving,
+      distributionSaving,
+      exportIncome,
+    },
   }
 }

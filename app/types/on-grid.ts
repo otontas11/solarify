@@ -58,8 +58,9 @@ export interface OnGridForm {
   selectedPanel: string
   electricityBuyPrice: number
   electricitySellPrice: number
-  distributionFee: number | null
+  distributionFee: number
   yearlyConsumption: number | null
+  annualEscalationRate: number
 }
 
 export interface MonthlySeriesItem {
@@ -92,4 +93,9 @@ export interface OnGridResult {
   optimalAspect: number | null
   monthlySeries: MonthlySeriesItem[]
   cumulativeCashflow: number[]
+  savingsBreakdown: {
+    selfConsumptionSaving: number
+    distributionSaving: number
+    exportIncome: number
+  }
 }

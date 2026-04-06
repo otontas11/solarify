@@ -143,6 +143,21 @@
               </div>
             </div>
 
+            <!-- Tarife Bilgisi -->
+            <div class="tariff-info">
+              <p class="tariff-info-title">Guncel EPDK Tarifesi (Nisan 2026)</p>
+              <div class="tariff-info-grid">
+                <span>Enerji bedeli:</span>
+                <strong>{{ number(currentTariff.energyPrice, 2) }} TL/kWh{{ currentTariff.energyTiers ? ' (1. kademe)' : '' }}</strong>
+                <span>Dagitim bedeli:</span>
+                <strong>{{ number(currentTariff.distributionFee, 2) }} TL/kWh</strong>
+                <span>Toplam alis:</span>
+                <strong>{{ number(currentTariff.energyPrice + currentTariff.distributionFee, 2) }} TL/kWh</strong>
+                <span>Satis fiyati:</span>
+                <strong>{{ number(currentTariff.sellPrice, 2) }} TL/kWh</strong>
+              </div>
+            </div>
+
             <!-- Cati Cephesi -->
             <div class="field-group">
               <p class="field-group-title">Cati Cephesi</p>
@@ -266,8 +281,12 @@
                   <input v-model.number="form.electricitySellPrice" min="0" step="0.01" type="number" />
                 </label>
                 <label>
-                  <span>Dagitim Bedeli (Opsiyonel)</span>
-                  <input v-model.number="form.distributionFee" min="0" placeholder="0.76" step="0.01" type="number" />
+                  <span>Dagitim Bedeli (TL/kWh)</span>
+                  <input v-model.number="form.distributionFee" min="0" step="0.01" type="number" />
+                </label>
+                <label>
+                  <span>Yillik Elektrik Zam Orani (%)</span>
+                  <input v-model.number="form.annualEscalationRate" min="0" max="50" step="1" type="number" />
                 </label>
                 <label>
                   <span>Yillik Elektrik Tuketimi (kWh)</span>
@@ -369,7 +388,11 @@
                 <div class="result-tile">
                   <span>Yillik tasarruf</span>
                   <strong>{{ currency(result.yearlySavings) }}</strong>
-                  <small>Basit model: min(uretim, tuketim) x birim fiyat</small>
+                  <small class="savings-breakdown">
+                    Ozt: {{ currency(result.savingsBreakdown.selfConsumptionSaving) }}
+                    + Dag: {{ currency(result.savingsBreakdown.distributionSaving) }}
+                    + Sat: {{ currency(result.savingsBreakdown.exportIncome) }}
+                  </small>
                 </div>
                 <div class="result-tile">
                   <span>Kurulum maliyeti</span>
@@ -379,7 +402,7 @@
                 <div class="result-tile">
                   <span>Geri donus suresi</span>
                   <strong>{{ number(result.paybackYears, 1) }} yil</strong>
-                  <small>10 yillik nakit akis simulasyonu da asagida</small>
+                  <small>25 yillik nakit akis simulasyonu (%{{ form.annualEscalationRate }} zam)</small>
                 </div>
                 <div class="result-tile">
                   <span>Tuketim karsilama</span>
@@ -420,7 +443,7 @@
 
                 <div class="chart-card">
                   <div class="chart-head">
-                    <strong>10 yillik geri donus egirisi</strong>
+                    <strong>25 yillik geri donus egrisi</strong>
                     <span>Degradasyon: %{{ number(form.annualDegradation, 1) }}</span>
                   </div>
                   <div class="cashflow-list">
@@ -519,6 +542,7 @@ import {
   roofOptions,
   subscriberGroups,
 } from '~/data/on-grid'
+import { tariffs } from '~/data/tariffs'
 import type { CalculationMode, MountingPlace, OnGridResult, RoofDirection, SubscriberGroup } from '~/types/on-grid'
 
 type OnGridStep = 'location' | 'details' | 'results'
@@ -556,6 +580,22 @@ watchEffect(() => {
   form.lng = location.value.lng
   form.drawnAreaM2 = location.value.drawnAreaM2
 })
+
+// Abone grubu degisince tarife fiyatlarini guncelle
+const currentTariff = computed(() => tariffs[form.subscriberGroup])
+
+watch(
+  () => form.subscriberGroup,
+  (group) => {
+    const t = tariffs[group]
+    if (!t) return
+    form.electricityBuyPrice = t.energyPrice
+    form.electricitySellPrice = t.sellPrice
+    form.distributionFee = t.distributionFee
+    // KDV dahil ortalama birim fiyat (basit mod icin)
+    form.electricityPrice = Number(((t.energyPrice + t.distributionFee) * (1 + t.vatRate)).toFixed(2))
+  },
+)
 
 const selectPanel = (panelValue: string) => {
   form.selectedPanel = panelValue
@@ -633,9 +673,16 @@ const runCalculation = async () => {
       mountingPlace: form.mountingPlace,
     }
 
-    if (form.calculationMode === 'advanced') {
-      queryParams.electricityBuyPrice = form.electricityBuyPrice
-      queryParams.electricitySellPrice = form.electricitySellPrice
+    queryParams.electricityBuyPrice = form.electricityBuyPrice
+    queryParams.electricitySellPrice = form.electricitySellPrice
+    queryParams.distributionFee = form.distributionFee
+    queryParams.annualEscalationRate = form.annualEscalationRate
+    queryParams.subscriberGroup = form.subscriberGroup
+
+    // Kademeli tarife bilgisi
+    const t = tariffs[form.subscriberGroup]
+    if (t?.energyTiers) {
+      queryParams.energyTiers = JSON.stringify(t.energyTiers)
     }
 
     result.value = await $fetch<OnGridResult>('/api/solar/calculate', {

@@ -40,7 +40,17 @@ export default defineEventHandler(async (event) => {
 
   const electricityBuyPrice = optionalNumberParam(query.electricityBuyPrice)
   const electricitySellPrice = optionalNumberParam(query.electricitySellPrice)
+  const distributionFee = optionalNumberParam(query.distributionFee)
+  const annualEscalationRate = optionalNumberParam(query.annualEscalationRate)
   const mountingPlace = query.mountingPlace === 'free' ? 'free' as const : 'building' as const
+
+  // Kademeli tarife (mesken)
+  let energyTiers: { limit: number; price: number }[] | undefined
+  if (query.energyTiers) {
+    try {
+      energyTiers = JSON.parse(String(query.energyTiers))
+    } catch { /* ignore */ }
+  }
 
   return calculateSolarResult({
     address: String(query.address ?? ''),
@@ -67,5 +77,9 @@ export default defineEventHandler(async (event) => {
     mountingPlace,
     electricityBuyPrice,
     electricitySellPrice,
+    distributionFee,
+    annualEscalationRate,
+    subscriberGroup: String(query.subscriberGroup ?? 'mesken'),
+    energyTiers,
   })
 })
