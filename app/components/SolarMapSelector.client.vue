@@ -328,51 +328,59 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="map-selector google-map-selector">
-    <div class="map-search">
-      <div ref="autocompleteHost" class="autocomplete-shell" />
-      <p v-if="errorMessage" class="map-error">
-        {{ errorMessage }}
-      </p>
+    <div class="map-layout">
+      <!-- Sol: Harita -->
+      <div class="map-left">
+        <div ref="mapRef" class="solar-map" />
+
+        <div class="map-toolbar">
+          <div class="toolbar-copy">
+            <strong>Polygon alan secimi</strong>
+            <span>Haritada panel kurulacak alani klikleyerek cizin. En az 3 nokta gerekir.</span>
+          </div>
+
+          <div class="toolbar-actions">
+            <button class="secondary-btn" type="button" :disabled="pointCount === 0" @click="undoLastPoint">
+              Geri Al
+            </button>
+            <button class="secondary-btn" type="button" @click="resetToLocation">
+              Konuma Don
+            </button>
+            <button class="secondary-btn" type="button" :disabled="pointCount === 0" @click="clearPolygon">
+              Cizimi Temizle
+            </button>
+          </div>
+        </div>
+
+        <p class="map-hint">
+          {{ ready ? `${pointCount} nokta eklendi. Polygon tamamlandiginda alan otomatik hesaplanir.` : 'Harita yukleniyor...' }}
+        </p>
+      </div>
+
+      <!-- Sag: Arama + Bilgiler -->
+      <div class="map-right">
+        <div class="map-search">
+          <div ref="autocompleteHost" class="autocomplete-shell" />
+          <p v-if="errorMessage" class="map-error">
+            {{ errorMessage }}
+          </p>
+        </div>
+
+        <div class="map-meta-vertical">
+          <div class="meta-item">
+            <span>Secilen konum</span>
+            <strong>{{ cityLabel || address || 'Konum secilmedi' }}</strong>
+          </div>
+          <div class="meta-item">
+            <span>Koordinat</span>
+            <strong>{{ lat !== null ? `${lat.toFixed(4)}, ${lng?.toFixed(4)}` : '-' }}</strong>
+          </div>
+          <div class="meta-item">
+            <span>Alan</span>
+            <strong>{{ areaM2.toLocaleString('tr-TR') }} m2</strong>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <div class="map-meta">
-      <div>
-        <span>Secilen konum</span>
-        <strong>{{ cityLabel || address || 'Konum secilmedi' }}</strong>
-      </div>
-      <div>
-        <span>Koordinat</span>
-        <strong>{{ lat !== null ? `${lat.toFixed(4)}, ${lng?.toFixed(4)}` : '-' }}</strong>
-      </div>
-      <div>
-        <span>Alan</span>
-        <strong>{{ areaM2.toLocaleString('tr-TR') }} m2</strong>
-      </div>
-    </div>
-
-    <div ref="mapRef" class="solar-map" />
-
-    <div class="map-toolbar">
-      <div class="toolbar-copy">
-        <strong>Polygon alan secimi</strong>
-        <span>Haritada panel kurulacak alani klikleyerek cizin. En az 3 nokta gerekir.</span>
-      </div>
-
-      <div class="toolbar-actions">
-        <button class="secondary-btn" type="button" :disabled="pointCount === 0" @click="undoLastPoint">
-          Geri Al
-        </button>
-        <button class="secondary-btn" type="button" @click="resetToLocation">
-          Konuma Don
-        </button>
-        <button class="secondary-btn" type="button" :disabled="pointCount === 0" @click="clearPolygon">
-          Cizimi Temizle
-        </button>
-      </div>
-    </div>
-
-    <p class="map-hint">
-      {{ ready ? `${pointCount} nokta eklendi. Polygon tamamlandiginda alan otomatik hesaplanir.` : 'Harita yukleniyor...' }}
-    </p>
   </div>
 </template>

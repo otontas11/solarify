@@ -41,7 +41,7 @@
     </section>
 
     <section class="wizard-shell">
-      <div class="stepper stepper-3">
+      <div class="stepper stepper-2">
         <button
             v-for="(step, index) in steps"
             :key="step.key"
@@ -49,7 +49,6 @@
             :class="{
             active: currentStep === step.key,
             complete: index < activeStepIndex,
-            disabled: step.key === 'results' && !canGoToResults,
           }"
             type="button"
             @click="jumpToStep(step.key)"
@@ -60,49 +59,82 @@
         </button>
       </div>
 
-      <div class="content-grid">
+      <!-- Anlik Tahmin - tabların altında yatay -->
+      <section class="live-estimate-strip card">
+        <div class="live-estimate-header">
+          <p class="section-step">Anlik Tahmin</p>
+          <small class="estimate-note-inline">
+            {{ result ? 'PVGIS verimi kullaniliyor' : 'Turkiye ortalamasi (1400 kWh/kWp) ile tahmini hesap' }}
+          </small>
+          <div v-if="isCalculating" class="calc-indicator">Hesaplaniyor...</div>
+        </div>
+        <div class="live-estimate-grid">
+          <div class="live-estimate-item">
+            <span>Panel sayisi</span>
+            <strong>{{ number(liveEstimate.panelCount) }} adet</strong>
+          </div>
+          <div class="live-estimate-item">
+            <span>Sistem gucu</span>
+            <strong>{{ number(liveEstimate.systemSizeKw, 2) }} kWp</strong>
+          </div>
+          <div class="live-estimate-item">
+            <span>Yillik uretim</span>
+            <strong>{{ number(liveEstimate.yearlyProduction) }} kWh</strong>
+          </div>
+          <div class="live-estimate-item">
+            <span>Yillik tasarruf</span>
+            <strong>{{ currency(liveEstimate.yearlySavings) }}</strong>
+          </div>
+          <div class="live-estimate-item">
+            <span>Kurulum maliyeti</span>
+            <strong>{{ currency(liveEstimate.installationCost) }}</strong>
+          </div>
+          <div class="live-estimate-item">
+            <span>Geri donus</span>
+            <strong>{{ liveEstimate.paybackYears === Infinity ? '—' : number(liveEstimate.paybackYears, 1) + ' yil' }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 1: Konum & Alan (full width) -->
+      <section v-if="currentStep === 'location'" class="card location-card-full">
+        <div class="section-head">
+          <p class="section-step">1. Konum ve Alan</p>
+          <h2>Il / ilce arayin, sonra cati veya arazi alanini poligon ile secin</h2>
+        </div>
+
+        <ClientOnly>
+          <SolarMapSelector
+              :address="location.address"
+              :area-m2="location.drawnAreaM2"
+              :city-label="location.cityLabel"
+              :lat="location.lat"
+              :lng="location.lng"
+              @area-change="handleAreaChange"
+              @location-change="handleLocationChange"
+          />
+        </ClientOnly>
+
+        <p v-if="!canProceedFromLocation" class="validation-hint">
+          Devam etmek icin adres secin ve haritada alan cizin.
+        </p>
+
+        <div class="wizard-actions">
+          <button
+              class="primary-btn"
+              :disabled="!canProceedFromLocation"
+              type="button"
+              @click="nextStep"
+          >
+            Devam Et
+          </button>
+        </div>
+      </section>
+
+      <div v-if="currentStep === 'details'" class="content-grid">
         <div class="flow-column">
-          <!-- STEP 1: Konum & Alan -->
-          <section v-if="currentStep === 'location'" class="card">
-            <div class="section-head">
-              <p class="section-step">1. Konum ve Alan</p>
-              <h2>Il / ilce arayin, sonra cati veya arazi alanini poligon ile secin</h2>
-            </div>
-
-            <ClientOnly>
-              <SolarMapSelector
-                  :address="location.address"
-                  :area-m2="location.drawnAreaM2"
-                  :city-label="location.cityLabel"
-                  :lat="location.lat"
-                  :lng="location.lng"
-                  @area-change="handleAreaChange"
-                  @location-change="handleLocationChange"
-              />
-            </ClientOnly>
-
-            <div v-if="location.lat !== null" class="assumption-strip">
-              <div class="mini-stat">
-                <span>Konum</span>
-                <strong>{{ location.cityLabel || location.address }}</strong>
-              </div>
-              <div class="mini-stat">
-                <span>Koordinat</span>
-                <strong>{{ location.lat?.toFixed(4) }}, {{ location.lng?.toFixed(4) }}</strong>
-              </div>
-              <div class="mini-stat">
-                <span>Secilen alan</span>
-                <strong>{{ number(location.drawnAreaM2, 1) }} m2</strong>
-              </div>
-            </div>
-
-            <p v-if="!canProceedFromLocation" class="validation-hint">
-              Devam etmek icin adres secin ve haritada alan cizin.
-            </p>
-          </section>
-
           <!-- STEP 2: Bilgiler -->
-          <section v-if="currentStep === 'details'" class="card">
+          <section class="card">
             <div class="section-head">
               <p class="section-step">2. Bilgi Girisi</p>
               <h2>Hesaplama modunu secin ve bilgilerinizi girin</h2>
@@ -358,23 +390,40 @@
             </div>
           </section>
 
-          <!-- STEP 3: Sonuc -->
-          <section v-if="currentStep === 'results'" class="card">
+
+          <div class="wizard-actions">
+            <button
+                class="secondary-btn"
+                type="button"
+                @click="previousStep"
+            >
+              Geri
+            </button>
+          </div>
+        </div>
+
+        <!-- Sag sidebar: PVGIS sonuclari (step 2 ve 3'te gorunur) -->
+        <aside class="results-column">
+          <section class="card sticky-card">
             <div class="section-head">
-              <p class="section-step">3. Sonuc Dashboard</p>
-              <h2>Google Places + PVGIS tabanli on-grid fizibilite</h2>
+              <p class="section-step">PVGIS Fizibilite Sonuclari</p>
+              <h2>Detayli hesaplama</h2>
             </div>
 
             <div v-if="isCalculating" class="loading-state">
-              PVGIS verisi aliniyor ve hesaplama yapiliyor...
+              PVGIS verisi aliniyor...
             </div>
 
             <div v-else-if="calculationError" class="error-state">
               {{ calculationError }}
             </div>
 
-            <template v-else-if="result">
-              <div class="result-grid">
+            <div v-else-if="!result" class="empty-state">
+              Veriler girildikce PVGIS hesabi otomatik yapilacak.
+            </div>
+
+            <template v-else>
+              <div class="result-grid one-col">
                 <div class="result-tile">
                   <span>PVGIS yillik verim</span>
                   <strong>{{ number(result.pvYield) }} kWh/kWp-yil</strong>
@@ -393,7 +442,7 @@
                 <div class="result-tile">
                   <span>Yillik uretim</span>
                   <strong>{{ number(result.yearlyProduction) }} kWh</strong>
-                  <small>Aylik ortalama {{ number(result.monthlyAverageProduction) }} kWh</small>
+                  <small>Aylik ort. {{ number(result.monthlyAverageProduction) }} kWh</small>
                 </div>
                 <div class="result-tile">
                   <span>Yillik tasarruf</span>
@@ -406,17 +455,15 @@
                 <div class="result-tile">
                   <span>Kurulum maliyeti</span>
                   <strong>{{ currency(result.installationCost) }}</strong>
-                  <small>Kurulum maliyeti ve cati tipi katsayisi ile</small>
                 </div>
                 <div class="result-tile">
                   <span>Geri donus suresi</span>
                   <strong>{{ number(result.paybackYears, 1) }} yil</strong>
-                  <small>25 yillik nakit akis simulasyonu (%{{ form.annualEscalationRate }} zam)</small>
+                  <small>%{{ form.annualEscalationRate }} yillik zam ile</small>
                 </div>
                 <div class="result-tile">
                   <span>Tuketim karsilama</span>
                   <strong>%{{ number(result.selfSufficiencyRate, 1) }}</strong>
-                  <small>Adres: {{ result.address }}</small>
                 </div>
                 <div v-if="result.optimalAngle !== null" class="result-tile">
                   <span>PVGIS Optimal Aci</span>
@@ -425,129 +472,34 @@
                 </div>
               </div>
 
-              <div class="chart-stack">
-                <div class="chart-card">
-                  <div class="chart-head">
-                    <strong>Aylik uretim vs tuketim</strong>
-                    <span>PVGIS aylik dagilim</span>
-                  </div>
-                  <div class="bars">
-                    <div v-for="item in result.monthlySeries" :key="item.month" class="bar-group">
-                      <div class="bar-track">
-                        <div
-                            class="bar production"
-                            :style="{ height: `${(item.production / maxMonthlyProduction) * 100}%` }"
-                        />
-                      </div>
-                      <div class="bar-track muted">
-                        <div
-                            class="bar consumption"
-                            :style="{ height: `${(item.consumption / maxMonthlyConsumption) * 100}%` }"
-                        />
-                      </div>
-                      <small>{{ item.month }}</small>
+              <!-- Aylik uretim chart -->
+              <div class="chart-card" style="margin-top: 18px;">
+                <div class="chart-head">
+                  <strong>Aylik uretim vs tuketim</strong>
+                </div>
+                <div class="bars">
+                  <div v-for="item in result.monthlySeries" :key="item.month" class="bar-group">
+                    <div class="bar-track">
+                      <div
+                          class="bar production"
+                          :style="{ height: `${(item.production / maxMonthlyProduction) * 100}%` }"
+                      />
                     </div>
+                    <div class="bar-track muted">
+                      <div
+                          class="bar consumption"
+                          :style="{ height: `${(item.consumption / maxMonthlyConsumption) * 100}%` }"
+                      />
+                    </div>
+                    <small>{{ item.month }}</small>
                   </div>
                 </div>
-
-                <div class="chart-card">
-                  <div class="chart-head">
-                    <strong>25 yillik geri donus egrisi</strong>
-                    <span>Degradasyon: %{{ number(form.annualDegradation, 1) }}</span>
-                  </div>
-                  <div class="cashflow-list">
-                    <div
-                        v-for="(value, index) in result.cumulativeCashflow"
-                        :key="index"
-                        class="cashflow-row"
-                    >
-                      <span>Yil {{ index + 1 }}</span>
-                      <div class="cashflow-bar">
-                        <div
-                            class="cashflow-fill"
-                            :class="{ positive: value >= 0 }"
-                            :style="{ width: `${Math.min((Math.abs(value) / maxCashflowMagnitude) * 100, 100)}%` }"
-                        />
-                      </div>
-                      <strong>{{ currency(value) }}</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="note-box">
-                <strong>Hukuki not</strong>
-                <p>
-                  Bu hesaplama on fizibilite amaclidir. Nihai degerler saha kesfi, urun secimi ve
-                  teknik analiz sonrasinda netlesir.
-                </p>
               </div>
             </template>
-          </section>
 
-          <div class="wizard-actions">
-            <button
-                class="secondary-btn"
-                :disabled="activeStepIndex === 0 || isCalculating"
-                type="button"
-                @click="previousStep"
-            >
-              Geri
-            </button>
-
-            <button
-                v-if="currentStep !== 'results'"
-                class="primary-btn"
-                :disabled="
-                (currentStep === 'location' && !canProceedFromLocation) ||
-                (currentStep === 'details' && !canGoToResults) ||
-                isCalculating
-              "
-                type="button"
-                @click="nextStep"
-            >
-              {{ currentStep === 'details' ? 'PVGIS ile Hesapla' : 'Devam Et' }}
-            </button>
-          </div>
-        </div>
-
-        <aside class="results-column">
-          <section class="card sticky-card">
-            <div class="section-head">
-              <p class="section-step">Anlik Tahmin</p>
-              <h2>On fizibilite sonuclari</h2>
+            <div class="note-box" style="margin-top: 14px;">
+              <p>Bu hesaplama on fizibilite amaclidir.</p>
             </div>
-
-            <div class="result-grid one-col">
-              <div class="result-tile">
-                <span>Panel sayisi</span>
-                <strong>{{ number(liveEstimate.panelCount) }} adet</strong>
-              </div>
-              <div class="result-tile">
-                <span>Sistem gucu</span>
-                <strong>{{ number(liveEstimate.systemSizeKw, 2) }} kWp</strong>
-              </div>
-              <div class="result-tile">
-                <span>Yillik uretim</span>
-                <strong>{{ number(liveEstimate.yearlyProduction) }} kWh</strong>
-              </div>
-              <div class="result-tile">
-                <span>Yillik tasarruf</span>
-                <strong>{{ currency(liveEstimate.yearlySavings) }}</strong>
-              </div>
-              <div class="result-tile">
-                <span>Kurulum maliyeti</span>
-                <strong>{{ currency(liveEstimate.installationCost) }}</strong>
-              </div>
-              <div class="result-tile">
-                <span>Geri donus suresi</span>
-                <strong>{{ liveEstimate.paybackYears === Infinity ? '—' : number(liveEstimate.paybackYears, 1) + ' yil' }}</strong>
-              </div>
-            </div>
-
-            <p class="estimate-note">
-              {{ result ? 'PVGIS verimi kullaniliyor' : 'Turkiye ortalamasi (1400 kWh/kWp) ile tahmini hesap' }}
-            </p>
           </section>
         </aside>
       </div>
@@ -587,8 +539,7 @@ const showAdvanced = ref(false)
 
 const steps = [
   { key: 'location', title: 'Konum & Alan', summary: 'Adres ara, cati alanini ciz' },
-  { key: 'details', title: 'Bilgiler', summary: 'Fatura ve sistem bilgilerini gir' },
-  { key: 'results', title: 'Sonuc', summary: 'PVGIS tabanli fizibiliteyi gor' },
+  { key: 'details', title: 'Bilgiler & Sonuc', summary: 'Bilgi gir, PVGIS sonuclarini gor' },
 ]
 
 // Sync shared location into form
@@ -598,6 +549,13 @@ watchEffect(() => {
   form.lat = location.value.lat
   form.lng = location.value.lng
   form.drawnAreaM2 = location.value.drawnAreaM2
+  console.log('[LOCATION → FORM] Konum form\'a senkronize edildi:', {
+    address: form.address,
+    cityLabel: form.cityLabel,
+    lat: form.lat,
+    lng: form.lng,
+    drawnAreaM2: form.drawnAreaM2,
+  })
 })
 
 // Abone grubu degisince tarife fiyatlarini guncelle
@@ -608,9 +566,20 @@ watch(
   (group) => {
     const t = tariffs[group]
     if (!t) return
+    console.log('[TARIFE] Abone grubu değişti →', {
+      group,
+      label: t.label,
+      unitPrice: t.unitPrice,
+      sellPrice: t.sellPrice,
+    })
     form.electricityBuyPrice = t.unitPrice
     form.electricitySellPrice = t.sellPrice
     form.electricityPrice = t.unitPrice
+    console.log('[TARIFE → FORM] Form güncellendi:', {
+      electricityBuyPrice: form.electricityBuyPrice,
+      electricitySellPrice: form.electricitySellPrice,
+      electricityPrice: form.electricityPrice,
+    })
   },
 )
 
@@ -645,8 +614,21 @@ const liveEstimate = computed(() => {
     : 0
   const yearlyConsumption = monthlyConsumptionDerived.value * 12
   const recommendedSizeKw = pvYield > 0 ? yearlyConsumption / pvYield : 0
-  const feasibleSizeKw = Math.min(recommendedSizeKw, areaLimitedPeakPower)
-  const panelCount = form.panelPower > 0 ? Math.max(1, Math.ceil((feasibleSizeKw * 1000) / form.panelPower)) : 0
+
+  const maxPanels = form.panelArea > 0 ? Math.floor(usableArea / form.panelArea) : 0
+
+  let panelCount
+  if (form.coverFullBill) {
+    // Fatura bazlı: tüketimi karşılayacak kadar, alan sınırını aşmadan
+    const billPanels = form.panelPower > 0
+      ? Math.ceil((recommendedSizeKw * 1000) / form.panelPower)
+      : 0
+    panelCount = Math.min(billPanels, maxPanels)
+  } else {
+    // Varsayılan: alana sığan panel sayısı (on-grid'de fazla üretim şebekeye satılır)
+    panelCount = maxPanels
+  }
+  panelCount = Math.max(panelCount, usableArea > 0 ? 1 : 0)
   const systemSizeKw = (panelCount * form.panelPower) / 1000
   const yearlyProduction = systemSizeKw * pvYield
   const selfConsumption = Math.min(yearlyProduction, yearlyConsumption)
@@ -665,10 +647,6 @@ const maxMonthlyProduction = computed(() =>
 const maxMonthlyConsumption = computed(() =>
   Math.max(...(result.value?.monthlySeries.map((entry) => entry.consumption) ?? [1]), 1),
 )
-const maxCashflowMagnitude = computed(() =>
-  Math.max(...(result.value?.cumulativeCashflow.map((entry) => Math.abs(entry)) ?? [1]), 1),
-)
-
 const currency = (value) =>
   new Intl.NumberFormat('tr-TR', {
     style: 'currency',
@@ -710,6 +688,8 @@ const runCalculation = async () => {
       roofAngle: form.roofAngle,
       roofDirection: form.roofDirection,
       mountingPlace: form.mountingPlace,
+      coverFullBill: form.coverFullBill ? '1' : '',
+      coverFullRoof: form.coverFullRoof ? '1' : '',
     }
 
     queryParams.electricityBuyPrice = form.electricityBuyPrice
@@ -731,18 +711,11 @@ const runCalculation = async () => {
   }
 }
 
-const nextStep = async () => {
+const nextStep = () => {
   const index = activeStepIndex.value
   const next = steps[index + 1]
   if (!next) return
-
   if (currentStep.value === 'location' && !canProceedFromLocation.value) return
-
-  if (next.key === 'results') {
-    const ok = await runCalculation()
-    if (!ok) return
-  }
-
   currentStep.value = next.key
 }
 
@@ -754,19 +727,53 @@ const previousStep = () => {
   }
 }
 
-const jumpToStep = async (step) => {
-  if (step === 'results') {
-    const ok = await runCalculation()
-    if (!ok) return
-  }
+const jumpToStep = (step) => {
   currentStep.value = step
 }
 
 const handleLocationChange = (payload) => {
+  console.log('[LOCATION] İl seçildi → payload:', JSON.parse(JSON.stringify(payload)))
   setLocation(payload)
 }
 
 const handleAreaChange = (areaM2) => {
   setArea(areaM2)
 }
+
+// --- Debounced auto-calculation ---
+let autoCalcTimer = null
+
+watch(
+  [
+    () => form.monthlyBill,
+    () => form.electricityPrice,
+    () => form.electricityBuyPrice,
+    () => form.electricitySellPrice,
+    () => form.roofType,
+    () => form.roofAngle,
+    () => form.roofDirection,
+    () => form.mountingPlace,
+    () => form.subscriberGroup,
+    () => form.panelPower,
+    () => form.panelArea,
+    () => form.coverFullBill,
+    () => form.coverFullRoof,
+    () => form.drawnAreaM2,
+    () => form.lat,
+    () => form.lng,
+    () => form.annualEscalationRate,
+    () => form.systemLoss,
+    () => form.annualDegradation,
+    () => form.installationCostPerKw,
+    () => form.inverterEfficiency,
+  ],
+  () => {
+    if (!canGoToResults.value) return
+
+    if (autoCalcTimer) clearTimeout(autoCalcTimer)
+    autoCalcTimer = setTimeout(async () => {
+      await runCalculation()
+    }, 2500)
+  },
+)
 </script>

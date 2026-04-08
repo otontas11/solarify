@@ -204,11 +204,88 @@ label span,
   gap: 22px;
 }
 
+.content-single {
+  display: grid;
+  gap: 22px;
+  align-content: start;
+}
+
 .flow-column,
 .results-column {
   display: grid;
   gap: 22px;
   align-content: start;
+}
+
+/* Anlik Tahmin - yatay strip */
+.live-estimate-strip {
+  margin-bottom: 8px;
+}
+
+.live-estimate-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.live-estimate-header .section-step {
+  margin: 0;
+  font-weight: 700;
+}
+
+.estimate-note-inline {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(246, 184, 0, 0.10);
+  color: #875f00;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.calc-indicator {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 600;
+  animation: pulse-calc 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-calc {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.live-estimate-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.live-estimate-item {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  text-align: center;
+}
+
+.live-estimate-item span {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.live-estimate-item strong {
+  font-size: 1.05rem;
+  color: var(--text);
 }
 
 .section-head {
@@ -298,6 +375,53 @@ label span,
 .map-selector {
   display: grid;
   gap: 16px;
+}
+
+.map-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.map-left {
+  display: grid;
+  gap: 12px;
+}
+
+.map-right {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.map-meta-vertical {
+  display: grid;
+  gap: 10px;
+}
+
+.meta-item {
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.meta-item span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.meta-item strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.05rem;
+}
+
+.location-card-full {
+  width: 100%;
 }
 
 .map-search {
@@ -952,9 +1076,22 @@ select:focus {
   background: rgba(15, 39, 71, 0.12);
 }
 
+/* 2-step stepper */
+.stepper-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 /* 3-step stepper */
 .stepper-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.empty-state {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 /* Appliance list */
@@ -1057,6 +1194,20 @@ select:focus {
   .sticky-card {
     position: static;
   }
+
+  .live-estimate-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .map-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .live-estimate-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 820px) {
@@ -1077,6 +1228,7 @@ select:focus {
   }
 
   .stepper,
+  .stepper-2,
   .stepper-3,
   .single-row,
   .mode-grid,
