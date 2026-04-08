@@ -515,8 +515,8 @@ import {
   roofDirections,
   roofOptions,
   subscriberGroups,
-} from '~/data/on-grid'
-import { tariffs } from '~/data/tariffs'
+} from '~/data/on-grid.js'
+import { tariffs } from '~/data/tariffs.js'
 
 useHead({
   title: 'Solarify | On-Grid Fizibilite',
