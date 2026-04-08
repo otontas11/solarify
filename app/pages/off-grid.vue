@@ -302,7 +302,7 @@ import {
   panelOptions,
   roofDirections,
   roofOptions,
-} from '~/data/off-grid.js'
+} from '../data/off-grid.js'
 
 useHead({
   title: 'Solarify | Off-Grid Fizibilite',
