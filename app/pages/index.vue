@@ -1,5 +1,5 @@
 <script setup>
-import { systemCategories } from '../data/on-grid.js'
+import { systemCategories } from '~/data/on-grid'
 
 useHead({
   title: 'Solarify | Gunes Enerjisi Simulatoru',
