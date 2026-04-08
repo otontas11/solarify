@@ -295,7 +295,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import {
   applianceOptions,
   defaultOffGridForm,
@@ -303,7 +303,6 @@ import {
   roofDirections,
   roofOptions,
 } from '~/data/off-grid'
-import type { OffGridResult } from '~/types/off-grid'
 
 useHead({
   title: 'Solarify | Off-Grid Fizibilite',
@@ -318,11 +317,11 @@ useHead({
 const { location, setLocation, setArea, hasValidLocation } = useLocationState()
 
 const form = reactive(defaultOffGridForm())
-const result = ref<OffGridResult | null>(null)
+const result = ref(null)
 const isCalculating = ref(false)
 const calculationError = ref('')
 
-const selectPanel = (panelValue: string) => {
+const selectPanel = (panelValue) => {
   form.selectedPanel = panelValue
   const panel = panelOptions.find((p) => p.value === panelValue)
   if (panel) {
@@ -331,9 +330,9 @@ const selectPanel = (panelValue: string) => {
   }
 }
 
-const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[0]!)
+const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[0])
 
-const getApplianceWattage = (type: string) => {
+const getApplianceWattage = (type) => {
   return applianceOptions.find((a) => a.value === type)?.avgWattage ?? 0
 }
 
@@ -382,18 +381,18 @@ const addAppliance = () => {
   })
 }
 
-const removeAppliance = (id: string) => {
+const removeAppliance = (id) => {
   const index = form.appliances.findIndex((a) => a.id === id)
   if (index !== -1) form.appliances.splice(index, 1)
 }
 
-const number = (value: number, digits = 0) =>
+const number = (value, digits = 0) =>
   new Intl.NumberFormat('tr-TR', {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(value)
 
-const currency = (value: number) =>
+const currency = (value) =>
   new Intl.NumberFormat('tr-TR', {
     style: 'currency',
     currency: 'TRY',
@@ -407,10 +406,10 @@ const runCalculation = async () => {
   calculationError.value = ''
 
   try {
-    result.value = await $fetch<OffGridResult>('/api/solar/calculate-off-grid', {
+    result.value = await $fetch('/api/solar/calculate-off-grid', {
       query: {
-        lat: location.value.lat!,
-        lng: location.value.lng!,
+        lat: location.value.lat,
+        lng: location.value.lng,
         cityLabel: location.value.cityLabel,
         drawnAreaM2: location.value.drawnAreaM2,
         roofType: form.roofType,
@@ -432,7 +431,7 @@ const runCalculation = async () => {
 }
 
 // Debounced auto-calculate
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let debounceTimer = null
 watch(
   [
     () => form.roofType,
@@ -452,13 +451,11 @@ watch(
   },
 )
 
-const handleLocationChange = (payload: { lat: number; lng: number; address: string; cityLabel: string }) => {
+const handleLocationChange = (payload) => {
   setLocation(payload)
 }
 
-const handleAreaChange = (areaM2: number) => {
+const handleAreaChange = (areaM2) => {
   setArea(areaM2)
 }
 </script>
-
-

@@ -1,6 +1,5 @@
-<script setup lang="ts">
+<script setup>
 import { systemCategories } from '~/data/on-grid'
-import type { SystemCategoryKey } from '~/types/on-grid'
 
 useHead({
   title: 'Solarify | Gunes Enerjisi Simulatoru',
@@ -13,7 +12,7 @@ useHead({
   ],
 })
 
-const selectCategory = (key: SystemCategoryKey) => {
+const selectCategory = (key) => {
   const cat = systemCategories.find((c) => c.key === key)
   if (!cat?.available) return
 

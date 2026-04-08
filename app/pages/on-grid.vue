@@ -135,7 +135,7 @@
                     :key="group.value"
                     type="button"
                     :class="{ active: form.subscriberGroup === group.value }"
-                    @click="form.subscriberGroup = group.value as SubscriberGroup"
+                    @click="form.subscriberGroup = group.value"
                 >
                   <span class="subscriber-icon">{{ group.icon }}</span>
                   <strong>{{ group.label }}</strong>
@@ -181,7 +181,7 @@
                     :key="dir.value"
                     type="button"
                     :class="{ active: form.roofDirection === dir.value }"
-                    @click="form.roofDirection = dir.value as RoofDirection"
+                    @click="form.roofDirection = dir.value"
                 >
                   {{ dir.label }}
                 </button>
@@ -248,7 +248,7 @@
                     :key="opt.value"
                     type="button"
                     :class="{ active: form.mountingPlace === opt.value }"
-                    @click="form.mountingPlace = opt.value as MountingPlace"
+                    @click="form.mountingPlace = opt.value"
                 >
                   {{ opt.label }}
                 </button>
@@ -555,7 +555,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import {
   defaultOnGridForm,
   mountingOptions,
@@ -565,9 +565,6 @@ import {
   subscriberGroups,
 } from '~/data/on-grid'
 import { tariffs } from '~/data/tariffs'
-import type { CalculationMode, MountingPlace, OnGridResult, RoofDirection, SubscriberGroup } from '~/types/on-grid'
-
-type OnGridStep = 'location' | 'details' | 'results'
 
 useHead({
   title: 'Solarify | On-Grid Fizibilite',
@@ -582,13 +579,13 @@ useHead({
 const { location, setLocation, setArea, hasValidLocation } = useLocationState()
 
 const form = reactive(defaultOnGridForm())
-const currentStep = ref<OnGridStep>('location')
-const result = ref<OnGridResult | null>(null)
+const currentStep = ref('location')
+const result = ref(null)
 const isCalculating = ref(false)
 const calculationError = ref('')
 const showAdvanced = ref(false)
 
-const steps: { key: OnGridStep; title: string; summary: string }[] = [
+const steps = [
   { key: 'location', title: 'Konum & Alan', summary: 'Adres ara, cati alanini ciz' },
   { key: 'details', title: 'Bilgiler', summary: 'Fatura ve sistem bilgilerini gir' },
   { key: 'results', title: 'Sonuc', summary: 'PVGIS tabanli fizibiliteyi gor' },
@@ -617,7 +614,7 @@ watch(
   },
 )
 
-const selectPanel = (panelValue: string) => {
+const selectPanel = (panelValue) => {
   form.selectedPanel = panelValue
   const panel = panelOptions.find((p) => p.value === panelValue)
   if (panel) {
@@ -627,7 +624,7 @@ const selectPanel = (panelValue: string) => {
 }
 
 const activeStepIndex = computed(() => steps.findIndex((step) => step.key === currentStep.value))
-const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[0]!)
+const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[0])
 const monthlyConsumptionDerived = computed(() =>
   form.monthlyConsumption && form.monthlyConsumption > 0
     ? form.monthlyConsumption
@@ -672,14 +669,14 @@ const maxCashflowMagnitude = computed(() =>
   Math.max(...(result.value?.cumulativeCashflow.map((entry) => Math.abs(entry)) ?? [1]), 1),
 )
 
-const currency = (value: number) =>
+const currency = (value) =>
   new Intl.NumberFormat('tr-TR', {
     style: 'currency',
     currency: 'TRY',
     maximumFractionDigits: 0,
   }).format(value)
 
-const number = (value: number, digits = 0) =>
+const number = (value, digits = 0) =>
   new Intl.NumberFormat('tr-TR', {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
@@ -694,11 +691,11 @@ const runCalculation = async () => {
   calculationError.value = ''
 
   try {
-    const queryParams: Record<string, string | number> = {
+    const queryParams = {
       address: form.address,
       cityLabel: form.cityLabel,
-      lat: form.lat!,
-      lng: form.lng!,
+      lat: form.lat,
+      lng: form.lng,
       drawnAreaM2: form.drawnAreaM2,
       roofType: form.roofType,
       monthlyBill: form.monthlyBill,
@@ -720,7 +717,7 @@ const runCalculation = async () => {
     queryParams.annualEscalationRate = form.annualEscalationRate
     queryParams.subscriberGroup = form.subscriberGroup
 
-    result.value = await $fetch<OnGridResult>('/api/solar/calculate', {
+    result.value = await $fetch('/api/solar/calculate', {
       query: queryParams,
     })
 
@@ -757,7 +754,7 @@ const previousStep = () => {
   }
 }
 
-const jumpToStep = async (step: OnGridStep) => {
+const jumpToStep = async (step) => {
   if (step === 'results') {
     const ok = await runCalculation()
     if (!ok) return
@@ -765,13 +762,11 @@ const jumpToStep = async (step: OnGridStep) => {
   currentStep.value = step
 }
 
-const handleLocationChange = (payload: { lat: number; lng: number; address: string; cityLabel: string }) => {
+const handleLocationChange = (payload) => {
   setLocation(payload)
 }
 
-const handleAreaChange = (areaM2: number) => {
+const handleAreaChange = (areaM2) => {
   setArea(areaM2)
 }
 </script>
-
-

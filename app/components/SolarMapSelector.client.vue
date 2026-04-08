@@ -1,39 +1,36 @@
-<script setup lang="ts">
-const props = defineProps<{
-  lat: number | null
-  lng: number | null
-  address: string
-  cityLabel: string
-  areaM2: number
-}>()
+<script setup>
+const props = defineProps({
+  lat: { type: Number, default: null },
+  lng: { type: Number, default: null },
+  address: { type: String, default: '' },
+  cityLabel: { type: String, default: '' },
+  areaM2: { type: Number, default: 0 },
+})
 
-const emit = defineEmits<{
-  locationChange: [payload: { lat: number; lng: number; address: string; cityLabel: string }]
-  areaChange: [areaM2: number]
-}>()
+const emit = defineEmits(['locationChange', 'areaChange'])
 
 const config = useRuntimeConfig()
-const apiKey = config.public.googleMapsApiKey as string
+const apiKey = config.public.googleMapsApiKey
 
-const mapRef = ref<HTMLDivElement | null>(null)
-const autocompleteHost = ref<HTMLDivElement | null>(null)
+const mapRef = ref(null)
+const autocompleteHost = ref(null)
 const ready = ref(false)
 const errorMessage = ref('')
 const pointCount = ref(0)
 
-let map: any = null
-let polygon: any = null
-let locationMarker: any = null
-let polygonListeners: any[] = []
-let clickListener: any = null
-const pathPoints = ref<{ lat: number; lng: number }[]>([])
-const vertexMarkers: any[] = []
+let map = null
+let polygon = null
+let locationMarker = null
+let polygonListeners = []
+let clickListener = null
+const pathPoints = ref([])
+const vertexMarkers = []
 
 const TURKEY_CENTER = { lat: 39.0, lng: 35.0 }
 
 /** Load Google Maps via vanilla script tag */
-const loadGoogleMaps = (): Promise<void> => {
-  const win = window as any
+const loadGoogleMaps = () => {
+  const win = window
 
   // Already loaded
   if (win.google?.maps?.Map) return Promise.resolve()
@@ -76,7 +73,7 @@ const clearVertexMarkers = () => {
   vertexMarkers.length = 0
 }
 
-const addVertexMarker = (position: { lat: number; lng: number }, index: number) => {
+const addVertexMarker = (position, index) => {
   if (!map) return
   const m = new google.maps.Marker({
     map,
@@ -173,7 +170,7 @@ const ensurePolygon = async () => {
   await updateArea()
 }
 
-const addPoint = async (latLng: any) => {
+const addPoint = async (latLng) => {
   pathPoints.value = [...pathPoints.value, { lat: latLng.lat(), lng: latLng.lng() }]
   pointCount.value = pathPoints.value.length
   await ensurePolygon()
@@ -207,7 +204,7 @@ const resetToLocation = () => {
   }
 }
 
-const syncLocationMarker = (position: { lat: number; lng: number }) => {
+const syncLocationMarker = (position) => {
   if (!map) return
   if (!locationMarker) {
     locationMarker = new google.maps.Marker({ map, position })
@@ -272,14 +269,14 @@ onMounted(async () => {
   try {
     await loadGoogleMaps()
 
-    const gmaps = (window as any).google?.maps
+    const gmaps = window.google?.maps
     if (!gmaps?.Map) {
       errorMessage.value = 'Google Maps API yuklendi ama Map sinifi bulunamadi.'
       return
     }
 
     const hasInitialLocation = props.lat !== null && props.lng !== null
-    const initialCenter = hasInitialLocation ? { lat: props.lat!, lng: props.lng! } : TURKEY_CENTER
+    const initialCenter = hasInitialLocation ? { lat: props.lat, lng: props.lng } : TURKEY_CENTER
     const initialZoom = hasInitialLocation ? 20 : 6
 
     map = new gmaps.Map(mapRef.value, {
@@ -297,7 +294,7 @@ onMounted(async () => {
       syncLocationMarker(initialCenter)
     }
 
-    clickListener = map.addListener('click', async (event: any) => {
+    clickListener = map.addListener('click', async (event) => {
       if (!event.latLng) return
       await addPoint(event.latLng)
     })
@@ -311,7 +308,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => [props.lat, props.lng] as const,
+  () => [props.lat, props.lng],
   ([lat, lng]) => {
     if (!map || lat === null || lng === null) return
     const position = { lat, lng }
