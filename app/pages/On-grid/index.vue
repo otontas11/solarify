@@ -34,6 +34,10 @@
           <strong>{{ number(monthlyConsumptionDerived) }} kWh/ay</strong>
         </div>
         <div class="metric-row">
+          <span>Gunluk guneslenme</span>
+          <strong>{{ isLoadingSummary ? '...' : locationSummary ? locationSummary.dailySunHours + ' saat/gun' : '—' }}</strong>
+        </div>
+        <div class="metric-row">
           <span>Son hesap</span>
           <strong>{{ result ? number(result.paybackYears, 1) + ' yil' : 'Hesap bekleniyor' }}</strong>
         </div>
@@ -94,6 +98,22 @@
             <strong>{{ liveEstimate.paybackYears === Infinity ? '—' : number(liveEstimate.paybackYears, 1) + ' yil' }}</strong>
           </div>
         </div>
+
+        <!-- Konum Gunes Potansiyeli - kompakt -->
+        <div v-if="isLoadingSummary" class="solar-potansiyel-bar solar-potansiyel-loading">
+          <strong class="solar-potansiyel-title">{{ location.cityLabel }}</strong>
+          <span>Gunes verileri aliniyor...</span>
+        </div>
+        <div v-else-if="locationSummary" class="solar-potansiyel-bar">
+          <strong class="solar-potansiyel-title">{{ location.cityLabel }}</strong>
+          <div class="solar-potansiyel-items">
+            <span>&#9728; {{ locationSummary.dailySunHours }} saat/gun</span>
+            <span>&#9889; {{ number(locationSummary.pvYield) }} kWh/kWp</span>
+            <span>&#9788; {{ number(locationSummary.irradiation) }} kWh/m2</span>
+            <span v-if="locationSummary.optimalAngle !== null">&#9650; {{ number(locationSummary.optimalAngle, 1) }}°</span>
+          </div>
+          <small>PVGIS</small>
+        </div>
       </section>
 
       <!-- STEP 1: Konum & Alan (full width) -->
@@ -114,6 +134,39 @@
               @location-change="handleLocationChange"
           />
         </ClientOnly>
+
+        <!-- Konum Gunes Verileri -->
+        <div v-if="isLoadingSummary" class="location-solar-card loading-state">
+          Gunes verileri aliniyor...
+        </div>
+        <div v-else-if="locationSummary" class="location-solar-card">
+          <div class="location-solar-header">
+            <strong>{{ location.cityLabel }} - Gunes Enerjisi Potansiyeli</strong>
+            <small>PVGIS (Avrupa Komisyonu) veritabanindan alinmistir</small>
+          </div>
+          <div class="location-solar-grid">
+            <div class="solar-stat">
+              <span class="solar-stat-icon">&#9728;</span>
+              <strong>{{ locationSummary.dailySunHours }} saat/gun</strong>
+              <span>Ortalama guneslenme suresi</span>
+            </div>
+            <div class="solar-stat">
+              <span class="solar-stat-icon">&#9889;</span>
+              <strong>{{ number(locationSummary.pvYield) }} kWh/kWp</strong>
+              <span>1 kWp panel yillik uretim</span>
+            </div>
+            <div class="solar-stat">
+              <span class="solar-stat-icon">&#9788;</span>
+              <strong>{{ number(locationSummary.irradiation) }} kWh/m2</strong>
+              <span>Yillik gunes isinimi</span>
+            </div>
+            <div v-if="locationSummary.optimalAngle !== null" class="solar-stat">
+              <span class="solar-stat-icon">&#9650;</span>
+              <strong>{{ number(locationSummary.optimalAngle, 1) }}°</strong>
+              <span>Bu konum icin ideal panel acisi</span>
+            </div>
+          </div>
+        </div>
 
         <p v-if="!canProceedFromLocation" class="validation-hint">
           Devam etmek icin adres secin ve haritada alan cizin.
@@ -548,7 +601,9 @@ const currentStep = ref('location')
 const result = ref(null)
 const isCalculating = ref(false)
 const calculationError = ref('')
-const showAdvanced = ref(false)
+const showAdvanced = ref(true)
+const locationSummary = ref(null)
+const isLoadingSummary = ref(false)
 
 const steps = [
   { key: 'location', title: 'Konum & Alan', summary: 'Adres ara, cati alanini ciz' },
@@ -753,9 +808,25 @@ const jumpToStep = (step) => {
   currentStep.value = step
 }
 
-const handleLocationChange = (payload) => {
+const handleLocationChange = async (payload) => {
   console.log('[LOCATION] İl seçildi → payload:', JSON.parse(JSON.stringify(payload)))
   setLocation(payload)
+
+  // Konum secildiginde temel gunes verilerini cek
+  if (payload.lat && payload.lng) {
+    locationSummary.value = null
+    isLoadingSummary.value = true
+    try {
+      locationSummary.value = await $fetch('/api/solar/location-summary', {
+        query: { lat: payload.lat, lng: payload.lng },
+      })
+    } catch (e) {
+      console.warn('[LOCATION SUMMARY] Veri alinamadi:', e.message)
+      locationSummary.value = null
+    } finally {
+      isLoadingSummary.value = false
+    }
+  }
 }
 
 const handleAreaChange = (areaM2) => {
@@ -788,6 +859,7 @@ watch(
     () => form.annualDegradation,
     () => form.installationCostPerKw,
     () => form.inverterEfficiency,
+    () => form.coverageFactor,
   ],
   () => {
     if (!canGoToResults.value) return
@@ -795,7 +867,7 @@ watch(
     if (autoCalcTimer) clearTimeout(autoCalcTimer)
     autoCalcTimer = setTimeout(async () => {
       await runCalculation()
-    }, 2500)
+    }, 1500)
   },
 )
 </script>

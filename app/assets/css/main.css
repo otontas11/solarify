@@ -463,9 +463,10 @@ label span,
   white-space: nowrap;
 }
 
-.solar-potansiyel-loading {
+.solar-potansiyel-loading span {
   font-size: 0.82rem;
   color: var(--muted);
+  animation: pulse-calc 1.2s ease-in-out infinite;
 }
 
 /* Konum solar kart - step 1 icinde */
