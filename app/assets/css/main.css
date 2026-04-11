@@ -56,6 +56,10 @@ select {
   margin-bottom: 24px;
 }
 
+.hero-single {
+  grid-template-columns: 1fr;
+}
+
 .card {
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -233,6 +237,11 @@ label span,
 .live-estimate-header .section-step {
   margin: 0;
   font-weight: 700;
+}
+
+.estimate-location {
+  font-size: 0.92rem;
+  color: var(--primary);
 }
 
 .estimate-note-inline {
@@ -917,6 +926,19 @@ select:focus {
 
 .tariff-info-grid span {
   color: var(--text-muted, #666);
+}
+
+.tariff-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.tariff-inline > span {
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .savings-breakdown {
