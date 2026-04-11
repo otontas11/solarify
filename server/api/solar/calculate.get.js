@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     lat,
     lng,
     drawnAreaM2,
-    roofCoverageFactor: roof.coverageFactor,
+    roofCoverageFactor: optionalNumberParam(query.coverageFactor) ?? roof.coverageFactor,
     roofCostMultiplier: roof.costMultiplier,
     monthlyBill,
     electricityPrice,

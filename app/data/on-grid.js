@@ -108,6 +108,7 @@ export const defaultOnGridForm = () => ({
   roofDirection: 'south',
   roofAngle: 0,
   coverFullBill: false,
+  coverageFactor: 0.84,
   coverFullRoof: false,
   mountingPlace: 'building',
   selectedPanel: 'half-cut-108',

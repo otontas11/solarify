@@ -235,6 +235,19 @@
                   <span>Kaplama: %{{ number(option.coverageFactor * 100, 0) }}</span>
                 </button>
               </div>
+              <div class="range-field" style="margin-top: 0.5rem;">
+                <div class="range-header">
+                  <span>Çatı Kaplama Orani ( {{form.roofType}} ) </span>
+                  <strong>%{{ number(form.coverageFactor * 100, 0) }}</strong>
+                </div>
+                <input
+                    v-model.number="form.coverageFactor"
+                    type="range"
+                    min="0.30"
+                    max="0.95"
+                    step="0.01"
+                />
+              </div>
             </div>
 
             <!-- Aylik Elektrik Faturasi -->
@@ -381,7 +394,7 @@
               </div>
               <div class="mini-stat">
                 <span>Kullanilabilir alan katsayisi</span>
-                <strong>x{{ number(roofMeta.coverageFactor, 2) }}</strong>
+                <strong>x{{ number(form.coverageFactor, 2) }}</strong>
               </div>
               <div class="mini-stat">
                 <span>Turetilen tuketim</span>
@@ -583,6 +596,14 @@ watch(
   },
 )
 
+watch(
+  () => form.roofType,
+  (type) => {
+    const roof = roofOptions.find((r) => r.value === type)
+    if (roof) form.coverageFactor = roof.coverageFactor
+  },
+)
+
 const selectPanel = (panelValue) => {
   form.selectedPanel = panelValue
   const panel = panelOptions.find((p) => p.value === panelValue)
@@ -608,7 +629,7 @@ const canGoToResults = computed(
 
 const liveEstimate = computed(() => {
   const pvYield = result.value?.pvYield ?? 1400
-  const usableArea = form.drawnAreaM2 * (roofMeta.value.coverageFactor ?? 0.84)
+  const usableArea = form.drawnAreaM2 * (form.coverageFactor ?? roofMeta.value.coverageFactor ?? 0.84)
   const areaLimitedPeakPower = form.panelArea > 0
     ? (Math.floor(usableArea / form.panelArea) * form.panelPower) / 1000
     : 0
@@ -690,6 +711,7 @@ const runCalculation = async () => {
       mountingPlace: form.mountingPlace,
       coverFullBill: form.coverFullBill ? '1' : '',
       coverFullRoof: form.coverFullRoof ? '1' : '',
+      coverageFactor: form.coverageFactor,
     }
 
     queryParams.electricityBuyPrice = form.electricityBuyPrice
