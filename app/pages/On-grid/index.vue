@@ -4,46 +4,6 @@
       <NuxtLink to="/">← Kategori Secimi</NuxtLink>
     </div>
 
-    <section class="hero hero-blue">
-      <div class="hero-copy">
-        <p class="eyebrow">On-Grid Fizibilite / PVGIS</p>
-        <h1>Sebekeye bagli gunes enerjisi sistemi fizibilitesi</h1>
-        <p class="hero-text">
-          Adres arayarak konumunuzu secin, haritada panel kurulacak alani cizin,
-          PVGIS verisiyle yillik uretim, tasarruf ve geri donus suresi hesaplayin.
-        </p>
-        <div class="hero-badges">
-          <span>Google Places</span>
-          <span>Polygon alan secimi</span>
-          <span>PVGIS tabanli uretim</span>
-        </div>
-      </div>
-
-      <aside class="hero-summary card">
-        <p class="card-kicker">Canli Ozet</p>
-        <div class="metric-row">
-          <span>Secilen konum</span>
-          <strong>{{ location.cityLabel || 'Konum secilmedi' }}</strong>
-        </div>
-        <div class="metric-row">
-          <span>Cizilen alan</span>
-          <strong>{{ number(location.drawnAreaM2) }} m2</strong>
-        </div>
-        <div class="metric-row">
-          <span>Turetilen tuketim</span>
-          <strong>{{ number(monthlyConsumptionDerived) }} kWh/ay</strong>
-        </div>
-        <div class="metric-row">
-          <span>Gunluk guneslenme</span>
-          <strong>{{ isLoadingSummary ? '...' : locationSummary ? locationSummary.dailySunHours + ' saat/gun' : '—' }}</strong>
-        </div>
-        <div class="metric-row">
-          <span>Son hesap</span>
-          <strong>{{ result ? number(result.paybackYears, 1) + ' yil' : 'Hesap bekleniyor' }}</strong>
-        </div>
-      </aside>
-    </section>
-
     <section class="wizard-shell">
       <div class="stepper stepper-2">
         <button
@@ -67,6 +27,7 @@
       <section class="live-estimate-strip card">
         <div class="live-estimate-header">
           <p class="section-step">Anlik Tahmin</p>
+          <strong v-if="location.cityLabel" class="estimate-location">{{ location.cityLabel }}</strong>
           <small class="estimate-note-inline">
             {{ result ? 'PVGIS verimi kullaniliyor' : 'Turkiye ortalamasi (1400 kWh/kWp) ile tahmini hesap' }}
           </small>
@@ -135,39 +96,6 @@
           />
         </ClientOnly>
 
-        <!-- Konum Gunes Verileri -->
-        <div v-if="isLoadingSummary" class="location-solar-card loading-state">
-          Gunes verileri aliniyor...
-        </div>
-        <div v-else-if="locationSummary" class="location-solar-card">
-          <div class="location-solar-header">
-            <strong>{{ location.cityLabel }} - Gunes Enerjisi Potansiyeli</strong>
-            <small>PVGIS (Avrupa Komisyonu) veritabanindan alinmistir</small>
-          </div>
-          <div class="location-solar-grid">
-            <div class="solar-stat">
-              <span class="solar-stat-icon">&#9728;</span>
-              <strong>{{ locationSummary.dailySunHours }} saat/gun</strong>
-              <span>Ortalama guneslenme suresi</span>
-            </div>
-            <div class="solar-stat">
-              <span class="solar-stat-icon">&#9889;</span>
-              <strong>{{ number(locationSummary.pvYield) }} kWh/kWp</strong>
-              <span>1 kWp panel yillik uretim</span>
-            </div>
-            <div class="solar-stat">
-              <span class="solar-stat-icon">&#9788;</span>
-              <strong>{{ number(locationSummary.irradiation) }} kWh/m2</strong>
-              <span>Yillik gunes isinimi</span>
-            </div>
-            <div v-if="locationSummary.optimalAngle !== null" class="solar-stat">
-              <span class="solar-stat-icon">&#9650;</span>
-              <strong>{{ number(locationSummary.optimalAngle, 1) }}°</strong>
-              <span>Bu konum icin ideal panel acisi</span>
-            </div>
-          </div>
-        </div>
-
         <p v-if="!canProceedFromLocation" class="validation-hint">
           Devam etmek icin adres secin ve haritada alan cizin.
         </p>
@@ -231,7 +159,7 @@
             <!-- Tarife Bilgisi -->
             <div class="tariff-info">
               <p class="tariff-info-title">Guncel Tarife ({{ currentTariff.label }})</p>
-              <div class="tariff-info-grid">
+              <div class="tariff-inline">
                 <span>Birim fiyat:</span>
                 <div class="tariff-input-wrap">
                   <input
@@ -808,26 +736,44 @@ const jumpToStep = (step) => {
   currentStep.value = step
 }
 
-const handleLocationChange = async (payload) => {
-  console.log('[LOCATION] İl seçildi → payload:', JSON.parse(JSON.stringify(payload)))
-  setLocation(payload)
-
-  // Konum secildiginde temel gunes verilerini cek
-  if (payload.lat && payload.lng) {
+const fetchLocationSummary = async (lat, lng) => {
+  const useLat = lat ?? form.lat
+  const useLng = lng ?? form.lng
+  if (!useLat || !useLng) return
+  locationSummary.value = null
+  isLoadingSummary.value = true
+  try {
+    const q = { lat: useLat, lng: useLng }
+    if (form.roofDirection) q.roofDirection = form.roofDirection
+    if (form.roofAngle !== undefined && form.roofAngle !== null) q.roofAngle = form.roofAngle
+    locationSummary.value = await $fetch('/api/solar/location-summary', { query: q })
+  } catch (e) {
+    console.warn('[LOCATION SUMMARY] Veri alinamadi:', e.message)
     locationSummary.value = null
-    isLoadingSummary.value = true
-    try {
-      locationSummary.value = await $fetch('/api/solar/location-summary', {
-        query: { lat: payload.lat, lng: payload.lng },
-      })
-    } catch (e) {
-      console.warn('[LOCATION SUMMARY] Veri alinamadi:', e.message)
-      locationSummary.value = null
-    } finally {
-      isLoadingSummary.value = false
-    }
+  } finally {
+    isLoadingSummary.value = false
   }
 }
+
+let summaryTimer = null
+const debouncedFetchSummary = () => {
+  if (summaryTimer) clearTimeout(summaryTimer)
+  summaryTimer = setTimeout(() => fetchLocationSummary(), 600)
+}
+
+const handleLocationChange = (payload) => {
+  console.log('[LOCATION] İl seçildi → payload:', JSON.parse(JSON.stringify(payload)))
+  setLocation(payload)
+  fetchLocationSummary(payload.lat, payload.lng)
+}
+
+// Cephe veya aci degisince summary'yi guncelle
+watch(
+  [() => form.roofDirection, () => form.roofAngle],
+  () => {
+    if (form.lat && form.lng) debouncedFetchSummary()
+  },
+)
 
 const handleAreaChange = (areaM2) => {
   setArea(areaM2)
