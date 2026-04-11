@@ -58,13 +58,13 @@ export const subscriberGroups = [
 ]
 
 export const roofDirections = [
-  { value: 'south', label: 'Guney', aspect: 0 },
-  { value: 'north', label: 'Kuzey', aspect: 180 },
-  { value: 'east', label: 'Dogu', aspect: -90 },
-  { value: 'west', label: 'Bati', aspect: 90 },
-  { value: 'north-south', label: 'Kuzey & Guney', aspect: 0 },
-  { value: 'east-west', label: 'Dogu & Bati', aspect: 0 },
-  { value: 'all', label: 'Hepsi', aspect: 0 },
+  { value: 'south', label: 'Guney', aspects: [0] },
+  { value: 'north', label: 'Kuzey', aspects: [180] },
+  { value: 'east', label: 'Dogu', aspects: [-90] },
+  { value: 'west', label: 'Bati', aspects: [90] },
+  { value: 'north-south', label: 'Kuzey & Guney', aspects: [0, 180] },
+  { value: 'east-west', label: 'Dogu & Bati', aspects: [-90, 90] },
+  { value: 'all', label: 'Hepsi', aspects: [0, 90, 180, -90] },
 ]
 
 export const roofOptions = [

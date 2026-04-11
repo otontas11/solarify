@@ -27,21 +27,25 @@ export default defineEventHandler(async (event) => {
 
   const roof = roofOptions.find((r) => r.value === roofType) ?? roofOptions[0]
   const directionMeta = roofDirections.find((d) => d.value === roofDirection)
-  const roofAspect = directionMeta?.aspect ?? 0
+  const roofAspects = directionMeta?.aspects ?? [0]
 
   const systemLoss = 14
 
-  const pvgis = await fetchPvgisProduction({
-    lat,
-    lng,
-    peakPower: 1,
-    loss: systemLoss,
-    angle: roofAngle,
-    aspect: roofAspect,
-    mountingPlace: 'building',
-  })
+  const pvgisResults = await Promise.all(
+    roofAspects.map((aspect) =>
+      fetchPvgisProduction({
+        lat,
+        lng,
+        peakPower: 1,
+        loss: systemLoss,
+        angle: roofAngle,
+        aspect,
+        mountingPlace: 'building',
+      }),
+    ),
+  )
 
-  const pvYield = pvgis.yearlyProduction
+  const pvYield = pvgisResults.reduce((sum, r) => sum + r.yearlyProduction, 0) / pvgisResults.length
   const yearlyConsumption = dailyConsumptionKwh * 365
 
   const rawSystemSizeKw = yearlyConsumption / Math.max(pvYield, 1)

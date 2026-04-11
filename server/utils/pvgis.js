@@ -38,13 +38,14 @@ export const fetchPvgisProduction = async (params) => {
 
   return {
     yearlyProduction: toNumber(fixedTotals?.E_y),
-    irradiation: toNumber(fixedTotals?.H_i_y),
+    irradiation: toNumber(fixedTotals?.['H(i)_y']),
+    dailyIrradiation: toNumber(fixedTotals?.['H(i)_d']),
     optimalAngle: fixedMounting?.slope?.optimal ? (fixedMounting.slope.value ?? null) : null,
     optimalAspect: fixedMounting?.azimuth?.optimal ? (fixedMounting.azimuth.value ?? null) : null,
     monthlySeries: fixedMonthly.map((item) => ({
       month: monthLabels[item.month - 1] ?? String(item.month),
       production: toNumber(item.E_m),
-      irradiation: toNumber(item.H_i_m),
+      irradiation: toNumber(item['H(i)_m']),
     })),
   }
 }
@@ -61,21 +62,26 @@ export const calculateSolarResult = async (input) => {
   const areaLimitedPeakPower = (areaLimitedPanelCount * input.panelPower) / 1000
 
   const hasAngle = input.roofAngle !== undefined && input.roofAngle !== null
-  const hasAspect = input.roofAspect !== undefined && input.roofAspect !== null
-  const useOptimalAngles = !hasAngle && !hasAspect
+  const aspects = input.roofAspects ?? [0]
+  const useOptimalAngles = !hasAngle && aspects.length === 1 && aspects[0] === undefined
 
-  const initialPvgis = await fetchPvgisProduction({
-    lat: input.lat,
-    lng: input.lng,
-    peakPower: 1,
-    loss: input.systemLoss,
-    angle: input.roofAngle,
-    aspect: input.roofAspect,
-    optimalAngles: useOptimalAngles,
-    mountingPlace: input.mountingPlace,
-  })
+  // Birden fazla cephe varsa her biri icin PVGIS cagir ve ortalamasini al
+  const initialResults = await Promise.all(
+    aspects.map((aspect) =>
+      fetchPvgisProduction({
+        lat: input.lat,
+        lng: input.lng,
+        peakPower: 1,
+        loss: input.systemLoss,
+        angle: input.roofAngle,
+        aspect,
+        optimalAngles: false,
+        mountingPlace: input.mountingPlace,
+      }),
+    ),
+  )
 
-  const pvYield = initialPvgis.yearlyProduction
+  const pvYield = initialResults.reduce((sum, r) => sum + r.yearlyProduction, 0) / initialResults.length
   const recommendedSystemSizeKw = yearlyConsumption / Math.max(pvYield, 1)
 
   let panelCount
@@ -92,24 +98,32 @@ export const calculateSolarResult = async (input) => {
   // Sistem gücünü gerçek panel sayısından hesapla
   let feasibleSystemSizeKw = (panelCount * input.panelPower) / 1000
 
-  const finalPvgis = await fetchPvgisProduction({
-    lat: input.lat,
-    lng: input.lng,
-    peakPower: feasibleSystemSizeKw,
-    loss: input.systemLoss,
-    angle: input.roofAngle,
-    aspect: input.roofAspect,
-    optimalAngles: useOptimalAngles,
-    mountingPlace: input.mountingPlace,
-  })
+  const finalResults = await Promise.all(
+    aspects.map((aspect) =>
+      fetchPvgisProduction({
+        lat: input.lat,
+        lng: input.lng,
+        peakPower: feasibleSystemSizeKw,
+        loss: input.systemLoss,
+        angle: input.roofAngle,
+        aspect,
+        optimalAngles: false,
+        mountingPlace: input.mountingPlace,
+      }),
+    ),
+  )
 
-  const monthlySeries = finalPvgis.monthlySeries.map((item) => ({
+  // Aylik uretimi cephe sayisina gore ortalama al
+  const avgMonthlySeries = finalResults[0].monthlySeries.map((item, i) => ({
     month: item.month,
-    production: item.production,
+    production: finalResults.reduce((sum, r) => sum + r.monthlySeries[i].production, 0) / finalResults.length,
     consumption: monthlyConsumption,
   }))
 
-  const yearlyProduction = finalPvgis.yearlyProduction
+  const yearlyProduction = finalResults.reduce((sum, r) => sum + r.yearlyProduction, 0) / finalResults.length
+  const finalIrradiation = finalResults.reduce((sum, r) => sum + r.irradiation, 0) / finalResults.length
+  const finalOptimalAngle = finalResults[0].optimalAngle
+  const finalOptimalAspect = finalResults[0].optimalAspect
   const monthlyAverageProduction = yearlyProduction / 12
   const escalationRate = (input.annualEscalationRate ?? 15) / 100
 
@@ -154,7 +168,7 @@ export const calculateSolarResult = async (input) => {
     lat: input.lat,
     lng: input.lng,
     pvYield,
-    irradiation: finalPvgis.irradiation,
+    irradiation: finalIrradiation,
     usableAreaM2,
     areaLimitedPanelCount,
     recommendedSystemSizeKw,
@@ -167,10 +181,10 @@ export const calculateSolarResult = async (input) => {
     installationCost,
     paybackYears,
     co2OffsetKg,
-    optimalAngle: finalPvgis.optimalAngle,
-    optimalAspect: finalPvgis.optimalAspect,
+    optimalAngle: finalOptimalAngle,
+    optimalAspect: finalOptimalAspect,
     selfSufficiencyRate,
-    monthlySeries,
+    monthlySeries: avgMonthlySeries,
     cumulativeCashflow,
     savingsBreakdown: {
       selfConsumptionSaving,

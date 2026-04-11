@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
   const roofAngle = optionalNumberParam(query.roofAngle)
   const roofDirection = String(query.roofDirection ?? 'south')
   const directionMeta = roofDirections.find((d) => d.value === roofDirection)
-  const roofAspect = directionMeta?.aspect
+  const roofAspects = directionMeta?.aspects ?? [0]
 
   const electricityBuyPrice = optionalNumberParam(query.electricityBuyPrice)
   const electricitySellPrice = optionalNumberParam(query.electricitySellPrice)
@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
     annualDegradation: numberParam(query.annualDegradation, 0.5),
     installationCostPerKw: numberParam(query.installationCostPerKw, 44500),
     roofAngle,
-    roofAspect,
+    roofAspects,
     mountingPlace,
     electricityBuyPrice,
     electricitySellPrice,
