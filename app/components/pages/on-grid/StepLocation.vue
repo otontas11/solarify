@@ -11,6 +11,8 @@
                         :city-label="location.cityLabel"
                         :lat="location.lat"
                         :lng="location.lng"
+                        :panel-count="panelCount"
+                        :panel-label="panelLabel"
                         @area-change="$emit('area-change', $event)"
                         @location-change="$emit('location-change', $event)"
       />
@@ -24,8 +26,7 @@
       <button :disabled="!canProceed"
               class="primary-btn"
               type="button"
-              @click="$emit('next')"
-      >
+              @click="$emit('next')">
         Devam Et
       </button>
     </div>
@@ -33,10 +34,18 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   location: { type: Object, required: true },
   canProceed: { type: Boolean, default: false },
+  panelArea: { type: Number, default: 2.58 },
+  panelLabel: { type: String, default: '' },
+  coverageFactor: { type: Number, default: 0.84 },
 })
 
 defineEmits(['location-change', 'area-change', 'next'])
+
+const panelCount = computed(() => {
+  const usable = props.location.drawnAreaM2 * props.coverageFactor
+  return props.panelArea > 0 ? Math.floor(usable / props.panelArea) : 0
+})
 </script>

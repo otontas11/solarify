@@ -5,6 +5,8 @@ const props = defineProps({
   address: { type: String, default: '' },
   cityLabel: { type: String, default: '' },
   areaM2: { type: Number, default: 0 },
+  panelCount: { type: Number, default: 0 },
+  panelLabel: { type: String, default: '' },
 })
 
 const emit = defineEmits(['locationChange', 'areaChange'])
@@ -377,7 +379,12 @@ onBeforeUnmount(() => {
           </div>
           <div class="meta-item">
             <span>Alan</span>
-            <strong>{{ areaM2.toLocaleString('tr-TR') }} m2</strong>
+            <strong>{{ areaM2.toLocaleString('tr-TR') }} m²</strong>
+          </div>
+          <div v-if="panelCount > 0" class="meta-item">
+            <span>Tahmini panel sayisi</span>
+            <strong>{{ panelCount }} adet</strong>
+            <small v-if="panelLabel">{{ panelLabel }}</small>
           </div>
         </div>
       </div>

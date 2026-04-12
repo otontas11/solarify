@@ -18,38 +18,43 @@
         </button>
       </div>
 
-      <!-- Anlik Tahmin -->
-      <LiveEstimate :city-label="location.cityLabel"
-                    :estimate="liveEstimate"
-                    :has-pvgis="!!result"
-                    :is-calculating="isCalculating"
-                    :is-loading-summary="isLoadingSummary"
-                    :location-summary="locationSummary"
-      />
-
       <!-- STEP 1: Konum & Alan -->
       <StepLocation v-if="currentStep === 'location'"
                     :can-proceed="canProceedFromLocation"
+                    :coverage-factor="form.coverageFactor"
                     :location="location"
+                    :panel-area="form.panelArea"
+                    :panel-label="currentPanelLabel"
                     @next="nextStep"
                     @location-change="handleLocationChange"
                     @area-change="handleAreaChange"
       />
 
       <!-- STEP 2: Bilgiler & Sonuc -->
-      <StepDetails v-if="currentStep === 'details'"
+      <template v-if="currentStep === 'details'">
+        <!-- Anlik Tahmin -->
+        <LiveEstimate :city-label="location.cityLabel"
+                      :estimate="liveEstimate"
+                      :has-pvgis="!!result"
+                      :is-calculating="isCalculating"
+                      :is-loading-summary="isLoadingSummary"
+                      :location-summary="locationSummary"
+        />
+
+        <StepDetails
                    :calculation-error="calculationError"
                    :form="form"
                    :is-calculating="isCalculating"
                    :result="result"
                    @previous="previousStep"
-      />
+        />
+      </template>
     </section>
   </main>
 </template>
 
 <script setup>
-import { defaultOnGridForm, roofOptions } from '~/data/on-grid'
+import { defaultOnGridForm, panelOptions, roofOptions } from '~/data/on-grid'
 import StepLocation from '../../components/pages/on-grid/StepLocation.vue'
 import StepDetails from '../../components/pages/on-grid/StepDetails.vue'
 import LiveEstimate from '../../components/pages/on-grid/LiveEstimate.vue'
@@ -81,6 +86,10 @@ const steps = [
 
 const activeStepIndex = computed(() => steps.findIndex((step) => step.key === currentStep.value))
 const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[0])
+const currentPanelLabel = computed(() => {
+  const panel = panelOptions.find((p) => p.value === form.selectedPanel)
+  return panel ? `${panel.label} ${panel.power}Wp` : ''
+})
 const canProceedFromLocation = computed(() => hasValidLocation.value)
 
 const canGoToResults = computed(
@@ -210,6 +219,7 @@ watch(
 let autoCalcTimer = null
 
 const runCalculation = async() => {
+  console.log("runCalculation")
   if (!canGoToResults.value || form.lat === null || form.lng === null) return false
 
   isCalculating.value = true
