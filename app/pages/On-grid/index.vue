@@ -104,8 +104,8 @@
 
 <script setup>
 import { defaultOnGridForm, roofOptions } from '~/data/on-grid'
-import StepLocation from './components/StepLocation.vue'
-import StepDetails from './components/StepDetails.vue'
+import StepLocation from '../../components/pages/on-grid/StepLocation.vue'
+import StepDetails from '../../components/pages/on-grid/StepDetails.vue'
 
 useHead({
   title: 'Solarify | On-Grid Fizibilite',
