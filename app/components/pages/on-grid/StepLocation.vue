@@ -14,22 +14,21 @@
                         :panel-count="panelCount"
                         :panel-label="panelLabel"
                         @area-change="$emit('area-change', $event)"
-                        @location-change="$emit('location-change', $event)"
-      />
+                        @location-change="$emit('location-change', $event)">
+        <template #toolbar-actions>
+          <button :disabled="!canProceed"
+                  class="primary-btn"
+                  type="button"
+                  @click="$emit('next')">
+            Devam Et
+          </button>
+        </template>
+      </SolarMapSelector>
     </ClientOnly>
 
     <p v-if="!canProceed" class="validation-hint">
       Devam etmek icin adres secin ve haritada alan cizin.
     </p>
-
-    <div class="wizard-actions">
-      <button :disabled="!canProceed"
-              class="primary-btn"
-              type="button"
-              @click="$emit('next')">
-        Devam Et
-      </button>
-    </div>
   </section>
 </template>
 

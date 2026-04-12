@@ -351,6 +351,7 @@ onBeforeUnmount(() => {
             <button class="secondary-btn" type="button" :disabled="pointCount === 0" @click="clearPolygon">
               Cizimi Temizle
             </button>
+            <slot name="toolbar-actions" />
           </div>
         </div>
 
