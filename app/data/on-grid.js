@@ -73,7 +73,7 @@ export const roofOptions = [
   { value: 'aluminium-sandwich', label: 'Aluminyum Sandvic Panel Cati', coverageFactor: 0.82, costMultiplier: 1.05 },
   { value: 'kenet', label: 'Kenet Cati', coverageFactor: 0.80, costMultiplier: 1.08 },
   { value: 'membrane', label: 'Membran Cati', coverageFactor: 0.78, costMultiplier: 1.04 },
-  { value: 'flat', label: 'Duz Beton Teras Tipi Cati', coverageFactor: 0.78, costMultiplier: 1.04 },
+  { value: 'flat', label: 'Duz Beton Teras Tipi Cati', coverageFactor: 0.78, costMultiplier: 1.10 },
 ]
 
 export const mountingOptions = [
@@ -83,7 +83,7 @@ export const mountingOptions = [
 
 export const panelOptions = [
   { value: 'half-cut-108', label: 'Half-Cut 108PM12', power: 545, area: 2.58 },
-  { value: 'half-cut-144', label: 'Half-Cut 144PMHC', power: 455, area: 2.17 },
+  { value: 'half-cut-144', label: 'Half-Cut 144PMHC', power: 455, area: 2.09 },
   { value: 'half-cut-132', label: 'Half-Cut 132PM12', power: 670, area: 3.1 },
 ]
 
@@ -113,7 +113,7 @@ export const defaultOnGridForm = () => ({
   mountingPlace: 'building',
   selectedPanel: 'half-cut-108',
   electricityBuyPrice: 3.45,
-  electricitySellPrice: 1.39,
+  electricitySellPrice: 1.00,
   distributionFee: 0,
   yearlyConsumption: null,
   annualEscalationRate: 15,
