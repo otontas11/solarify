@@ -161,27 +161,9 @@
               <p class="tariff-info-title">Guncel Tarife ({{ currentTariff.label }})</p>
               <div class="tariff-inline">
                 <span>Birim fiyat:</span>
-                <div class="tariff-input-wrap">
-                  <input
-                      v-model.number="form.electricityBuyPrice"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      class="tariff-input"
-                  />
-                  <span class="tariff-unit">TL/kWh</span>
-                </div>
+                <UiFormInput v-model="form.electricityBuyPrice" :inline="true" :min="0" :step="0.01" suffix="TL/kWh" />
                 <span>Satis fiyati:</span>
-                <div class="tariff-input-wrap">
-                  <input
-                      v-model.number="form.electricitySellPrice"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      class="tariff-input"
-                  />
-                  <span class="tariff-unit">TL/kWh</span>
-                </div>
+                <UiFormInput v-model="form.electricitySellPrice" :inline="true" :min="0" :step="0.01" suffix="TL/kWh" />
               </div>
             </div>
 
@@ -216,53 +198,27 @@
                   <span>Kaplama: %{{ number(option.coverageFactor * 100, 0) }}</span>
                 </button>
               </div>
-              <div class="range-field" style="margin-top: 0.5rem;">
-                <div class="range-header">
-                  <span>Çatı Kaplama Orani ( {{form.roofType}} ) </span>
-                  <strong>%{{ number(form.coverageFactor * 100, 0) }}</strong>
-                </div>
-                <input
-                    v-model.number="form.coverageFactor"
+              <div style="margin-top: 0.5rem;">
+                <UiFormInput
+                    v-model="form.coverageFactor"
                     type="range"
-                    min="0.30"
-                    max="0.95"
-                    step="0.01"
+                    :label="`Cati Kaplama Orani (${form.roofType})`"
+                    :min="0.30"
+                    :max="0.95"
+                    :step="0.01"
+                    :format="(v) => `%${number(v * 100, 0)}`"
                 />
               </div>
             </div>
 
             <!-- Aylik Elektrik Faturasi -->
             <div class="field-group">
-              <div class="range-field">
-                <div class="range-header">
-                  <span>Aylik Elektrik Faturasi</span>
-                  <strong>{{ currency(form.monthlyBill) }}</strong>
-                </div>
-                <input
-                    v-model.number="form.monthlyBill"
-                    type="range"
-                    min="500"
-                    max="50000"
-                    step="100"
-                />
-              </div>
+              <UiFormInput v-model="form.monthlyBill" type="range" label="Aylik Elektrik Faturasi" :min="500" :max="50000" :step="100" :format="currency" />
             </div>
 
             <!-- Cati Acisi -->
             <div class="field-group">
-              <div class="range-field">
-                <div class="range-header">
-                  <span>Cati Acisi</span>
-                  <strong>{{ form.roofAngle }}°</strong>
-                </div>
-                <input
-                    v-model.number="form.roofAngle"
-                    type="range"
-                    min="0"
-                    max="45"
-                    step="1"
-                />
-              </div>
+              <UiFormInput v-model="form.roofAngle" type="range" label="Cati Acisi" :min="0" :max="45" :step="1" suffix="°" />
             </div>
 
             <!-- Kurulum Tipi -->
@@ -283,14 +239,8 @@
 
             <!-- Checkboxlar -->
             <div class="field-group">
-              <label class="checkbox-field">
-                <input v-model="form.coverFullBill" type="checkbox" />
-                <span>Faturanin tamamini karsilamak istiyorum</span>
-              </label>
-              <label class="checkbox-field">
-                <input v-model="form.coverFullRoof" type="checkbox" />
-                <span>Catimin tamamini kaplamak istiyorum</span>
-              </label>
+              <UiFormInput v-model="form.coverFullBill" type="checkbox" label="Faturanin tamamini karsilamak istiyorum" />
+              <UiFormInput v-model="form.coverFullRoof" type="checkbox" label="Catimin tamamini kaplamak istiyorum" />
             </div>
 
             <!-- Gelismis Mod -->
@@ -312,30 +262,12 @@
               </div>
 
               <div class="advanced-fields">
-                <label>
-                  <span>Elektrik Alis Fiyati (TL/kWh)</span>
-                  <input v-model.number="form.electricityBuyPrice" min="0" step="0.01" type="number" />
-                </label>
-                <label>
-                  <span>Elektrik Satis Fiyati (TL/kWh)</span>
-                  <input v-model.number="form.electricitySellPrice" min="0" step="0.01" type="number" />
-                </label>
-                <label>
-                  <span>Yillik Elektrik Zam Orani (%)</span>
-                  <input v-model.number="form.annualEscalationRate" min="0" max="50" step="1" type="number" />
-                </label>
-                <label>
-                  <span>Yillik Elektrik Tuketimi (kWh)</span>
-                  <input v-model.number="form.yearlyConsumption" min="0" placeholder="Bos birakilirsa faturadan hesaplanir" step="100" type="number" />
-                </label>
-                <label>
-                  <span>Aylik Fatura Tutari (TL)</span>
-                  <input v-model.number="form.monthlyBill" min="1" step="100" type="number" />
-                </label>
-                <label>
-                  <span>Elektrik Birim Fiyati (TL/kWh)</span>
-                  <input v-model.number="form.electricityPrice" min="0.1" step="0.1" type="number" />
-                </label>
+                <UiFormInput v-model="form.electricityBuyPrice" label="Elektrik Alis Fiyati (TL/kWh)" :min="0" :step="0.01" />
+                <UiFormInput v-model="form.electricitySellPrice" label="Elektrik Satis Fiyati (TL/kWh)" :min="0" :step="0.01" />
+                <UiFormInput v-model="form.annualEscalationRate" label="Yillik Elektrik Zam Orani (%)" :min="0" :max="50" :step="1" />
+                <UiFormInput v-model="form.yearlyConsumption" label="Yillik Elektrik Tuketimi (kWh)" :min="0" :step="100" placeholder="Bos birakilirsa faturadan hesaplanir" />
+                <UiFormInput v-model="form.monthlyBill" label="Aylik Fatura Tutari (TL)" :min="1" :step="100" />
+                <UiFormInput v-model="form.electricityPrice" label="Elektrik Birim Fiyati (TL/kWh)" :min="0.1" :step="0.1" />
               </div>
 
               <div class="advanced-toggle">
@@ -345,26 +277,11 @@
               </div>
 
               <div v-if="showAdvanced" class="form-grid advanced-grid">
-                <label>
-                  <span>Panel alani (m2)</span>
-                  <input v-model.number="form.panelArea" min="2" step="0.1" type="number" />
-                </label>
-                <label>
-                  <span>Inverter verimi (%)</span>
-                  <input v-model.number="form.inverterEfficiency" max="100" min="90" step="1" type="number" />
-                </label>
-                <label>
-                  <span>Sistem kaybi (%)</span>
-                  <input v-model.number="form.systemLoss" max="30" min="0" step="1" type="number" />
-                </label>
-                <label>
-                  <span>Yillik degradasyon (%)</span>
-                  <input v-model.number="form.annualDegradation" max="3" min="0" step="0.1" type="number" />
-                </label>
-                <label>
-                  <span>Kurulum maliyeti (TL/kWp)</span>
-                  <input v-model.number="form.installationCostPerKw" min="10000" step="500" type="number" />
-                </label>
+                <UiFormInput v-model="form.panelArea" label="Panel alani (m2)" :min="2" :step="0.1" />
+                <UiFormInput v-model="form.inverterEfficiency" label="Inverter verimi (%)" :min="90" :max="100" :step="1" />
+                <UiFormInput v-model="form.systemLoss" label="Sistem kaybi (%)" :min="0" :max="30" :step="1" />
+                <UiFormInput v-model="form.annualDegradation" label="Yillik degradasyon (%)" :min="0" :max="3" :step="0.1" />
+                <UiFormInput v-model="form.installationCostPerKw" label="Kurulum maliyeti (TL/kWp)" :min="10000" :step="500" />
               </div>
             </template>
 
