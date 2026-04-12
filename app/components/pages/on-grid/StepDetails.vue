@@ -85,17 +85,15 @@
                            @update:model-value="selectPanel"/>
           </div>
 
+          <div class="field-group">
+            <p class="field-group-title">Elektrik</p>
+          </div>
           <div class="advanced-fields">
-            <UiFormInput v-model="form.electricityBuyPrice" :min="0" :step="0.01"
-                         label="Elektrik Alis Fiyati (TL/kWh)"/>
-            <UiFormInput v-model="form.electricitySellPrice" :min="0" :step="0.01"
-                         label="Elektrik Satis Fiyati (TL/kWh)"/>
             <UiFormInput v-model="form.annualEscalationRate" :max="50" :min="0" :step="1"
                          label="Yillik Elektrik Zam Orani (%)"/>
             <UiFormInput v-model="form.yearlyConsumption" :min="0" :step="100" label="Yillik Elektrik Tuketimi (kWh)"
                          placeholder="Bos birakilirsa faturadan hesaplanir"/>
-            <UiFormInput v-model="form.monthlyBill" :min="1" :step="100" label="Aylik Fatura Tutari (TL)"/>
-            <UiFormInput v-model="form.electricityPrice" :min="0.1" :step="0.1" label="Elektrik Birim Fiyati (TL/kWh)"/>
+            <UiFormInput v-model="form.electricityPrice" :min="0.1" :step="0.1" label="Faturadaki Birim Fiyat (TL/kWh)"/>
           </div>
 
           <div class="advanced-toggle">
