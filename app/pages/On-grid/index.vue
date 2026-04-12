@@ -18,6 +18,12 @@
         </button>
       </div>
 
+      <!-- Konum Gunes Potansiyeli -->
+      <SolarPotential :city-label="location.cityLabel"
+                      :is-loading="isLoadingSummary"
+                      :summary="locationSummary"
+      />
+
       <!-- STEP 1: Konum & Alan -->
       <StepLocation v-if="currentStep === 'location'"
                     :can-proceed="canProceedFromLocation"
@@ -37,8 +43,6 @@
                       :estimate="liveEstimate"
                       :has-pvgis="!!result"
                       :is-calculating="isCalculating"
-                      :is-loading-summary="isLoadingSummary"
-                      :location-summary="locationSummary"
         />
 
         <StepDetails
@@ -58,6 +62,7 @@ import { defaultOnGridForm, panelOptions, roofOptions } from '~/data/on-grid'
 import StepLocation from '../../components/pages/on-grid/StepLocation.vue'
 import StepDetails from '../../components/pages/on-grid/StepDetails.vue'
 import LiveEstimate from '../../components/pages/on-grid/LiveEstimate.vue'
+import SolarPotential from '../../components/pages/on-grid/SolarPotential.vue'
 
 useHead({
   title: 'Solarify | On-Grid Fizibilite',

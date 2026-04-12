@@ -37,23 +37,6 @@
       </div>
     </div>
 
-    <!-- Konum Gunes Potansiyeli - kompakt -->
-    <div v-if="isLoadingSummary" class="solar-potansiyel-bar solar-potansiyel-loading">
-      <strong class="solar-potansiyel-title">{{ cityLabel }}</strong>
-      <span>Gunes verileri aliniyor...</span>
-    </div>
-    <div v-else-if="locationSummary" class="solar-potansiyel-bar">
-      <strong class="solar-potansiyel-title">{{ cityLabel }}</strong>
-      <div class="solar-potansiyel-items">
-        <span>&#9728; {{ locationSummary.dailySunHours }} saat/gun</span>
-        <span>&#9889; {{ number(locationSummary.pvYield) }} kWh/kWp</span>
-        <span>&#9788; {{ number(locationSummary.irradiation) }} kWh/m2</span>
-        <span v-if="locationSummary.optimalAngle !== null">&#9650; {{
-            number(locationSummary.optimalAngle, 1)
-          }}°</span>
-      </div>
-      <small>PVGIS</small>
-    </div>
   </section>
 </template>
 
@@ -63,8 +46,6 @@ defineProps({
   estimate: { type: Object, required: true },
   hasPvgis: { type: Boolean, default: false },
   isCalculating: { type: Boolean, default: false },
-  isLoadingSummary: { type: Boolean, default: false },
-  locationSummary: { type: Object, default: null },
 })
 
 const currency = (value) =>
