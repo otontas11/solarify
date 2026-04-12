@@ -6,17 +6,12 @@
 
     <section class="wizard-shell">
       <div class="stepper stepper-2">
-        <button
-            v-for="(step, index) in steps"
-            :key="step.key"
-            :class="{
-            active: currentStep === step.key,
-            complete: index < activeStepIndex,
-          }"
-            class="step-chip"
-            type="button"
-            @click="jumpToStep(step.key)"
-        >
+        <button v-for="(step, index) in steps"
+                :key="step.key"
+                :class="{active: currentStep === step.key,complete: index < activeStepIndex}"
+                class="step-chip"
+                type="button"
+                @click="jumpToStep(step.key)">
           <strong>0{{ index + 1 }}</strong>
           <span>{{ step.title }}</span>
           <small>{{ step.summary }}</small>
@@ -177,6 +172,7 @@ const fetchLocationSummary = async(lat, lng) => {
     if (form.roofDirection) q.roofDirection = form.roofDirection
     if (form.roofAngle !== undefined && form.roofAngle !== null) q.roofAngle = form.roofAngle
     locationSummary.value = await $fetch('/api/solar/location-summary', { query: q })
+    console.log("locationSummary.value", locationSummary.value)
   } catch (e) {
     console.warn('[LOCATION SUMMARY] Veri alinamadi:', e.message)
     locationSummary.value = null
@@ -192,11 +188,13 @@ const debouncedFetchSummary = () => {
 }
 
 const handleLocationChange = (payload) => {
+  console.log("handleLocationChange",payload)
   setLocation(payload)
   fetchLocationSummary(payload.lat, payload.lng)
 }
 
 const handleAreaChange = (areaM2) => {
+  console.log("handleAreaChange",areaM2)
   setArea(areaM2)
 }
 
