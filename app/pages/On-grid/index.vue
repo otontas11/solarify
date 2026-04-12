@@ -23,63 +23,14 @@
         </button>
       </div>
 
-      <!-- Anlik Tahmin - tabların altında yatay -->
-      <section class="live-estimate-strip card">
-        <div class="live-estimate-header">
-          <p class="section-step">Anlik Tahmin</p>
-          <strong v-if="location.cityLabel" class="estimate-location">{{ location.cityLabel }}</strong>
-          <small class="estimate-note-inline">
-            {{ result ? 'PVGIS verimi kullaniliyor' : 'Turkiye ortalamasi (1400 kWh/kWp) ile tahmini hesap' }}
-          </small>
-          <div v-if="isCalculating" class="calc-indicator">Hesaplaniyor...</div>
-        </div>
-        <div class="live-estimate-grid">
-          <div class="live-estimate-item">
-            <span>Panel sayisi</span>
-            <strong>{{ number(liveEstimate.panelCount) }} adet</strong>
-          </div>
-          <div class="live-estimate-item">
-            <span>Sistem gucu</span>
-            <strong>{{ number(liveEstimate.systemSizeKw, 2) }} kWp</strong>
-          </div>
-          <div class="live-estimate-item">
-            <span>Yillik uretim</span>
-            <strong>{{ number(liveEstimate.yearlyProduction) }} kWh</strong>
-          </div>
-          <div class="live-estimate-item">
-            <span>Yillik tasarruf</span>
-            <strong>{{ currency(liveEstimate.yearlySavings) }}</strong>
-          </div>
-          <div class="live-estimate-item">
-            <span>Kurulum maliyeti</span>
-            <strong>{{ currency(liveEstimate.installationCost) }}</strong>
-          </div>
-          <div class="live-estimate-item">
-            <span>Geri donus</span>
-            <strong>{{
-                liveEstimate.paybackYears === Infinity ? '—' : number(liveEstimate.paybackYears, 1) + ' yil'
-              }}</strong>
-          </div>
-        </div>
-
-        <!-- Konum Gunes Potansiyeli - kompakt -->
-        <div v-if="isLoadingSummary" class="solar-potansiyel-bar solar-potansiyel-loading">
-          <strong class="solar-potansiyel-title">{{ location.cityLabel }}</strong>
-          <span>Gunes verileri aliniyor...</span>
-        </div>
-        <div v-else-if="locationSummary" class="solar-potansiyel-bar">
-          <strong class="solar-potansiyel-title">{{ location.cityLabel }}</strong>
-          <div class="solar-potansiyel-items">
-            <span>&#9728; {{ locationSummary.dailySunHours }} saat/gun</span>
-            <span>&#9889; {{ number(locationSummary.pvYield) }} kWh/kWp</span>
-            <span>&#9788; {{ number(locationSummary.irradiation) }} kWh/m2</span>
-            <span v-if="locationSummary.optimalAngle !== null">&#9650; {{
-                number(locationSummary.optimalAngle, 1)
-              }}°</span>
-          </div>
-          <small>PVGIS</small>
-        </div>
-      </section>
+      <!-- Anlik Tahmin -->
+      <LiveEstimate :city-label="location.cityLabel"
+                    :estimate="liveEstimate"
+                    :has-pvgis="!!result"
+                    :is-calculating="isCalculating"
+                    :is-loading-summary="isLoadingSummary"
+                    :location-summary="locationSummary"
+      />
 
       <!-- STEP 1: Konum & Alan -->
       <StepLocation v-if="currentStep === 'location'"
@@ -106,6 +57,7 @@
 import { defaultOnGridForm, roofOptions } from '~/data/on-grid'
 import StepLocation from '../../components/pages/on-grid/StepLocation.vue'
 import StepDetails from '../../components/pages/on-grid/StepDetails.vue'
+import LiveEstimate from '../../components/pages/on-grid/LiveEstimate.vue'
 
 useHead({
   title: 'Solarify | On-Grid Fizibilite',
@@ -157,20 +109,6 @@ watch(
       if (roof) form.coverageFactor = roof.coverageFactor
     },
 )
-
-// --- Formatters ---
-const currency = (value) =>
-    new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY',
-      maximumFractionDigits: 0,
-    }).format(value)
-
-const number = (value, digits = 0) =>
-    new Intl.NumberFormat('tr-TR', {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    }).format(value)
 
 // --- Live Estimate ---
 const monthlyConsumptionDerived = computed(() =>
