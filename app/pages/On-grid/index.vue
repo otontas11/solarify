@@ -9,11 +9,11 @@
         <button
             v-for="(step, index) in steps"
             :key="step.key"
-            class="step-chip"
             :class="{
             active: currentStep === step.key,
             complete: index < activeStepIndex,
           }"
+            class="step-chip"
             type="button"
             @click="jumpToStep(step.key)"
         >
@@ -56,7 +56,9 @@
           </div>
           <div class="live-estimate-item">
             <span>Geri donus</span>
-            <strong>{{ liveEstimate.paybackYears === Infinity ? '—' : number(liveEstimate.paybackYears, 1) + ' yil' }}</strong>
+            <strong>{{
+                liveEstimate.paybackYears === Infinity ? '—' : number(liveEstimate.paybackYears, 1) + ' yil'
+              }}</strong>
           </div>
         </div>
 
@@ -71,299 +73,39 @@
             <span>&#9728; {{ locationSummary.dailySunHours }} saat/gun</span>
             <span>&#9889; {{ number(locationSummary.pvYield) }} kWh/kWp</span>
             <span>&#9788; {{ number(locationSummary.irradiation) }} kWh/m2</span>
-            <span v-if="locationSummary.optimalAngle !== null">&#9650; {{ number(locationSummary.optimalAngle, 1) }}°</span>
+            <span v-if="locationSummary.optimalAngle !== null">&#9650; {{
+                number(locationSummary.optimalAngle, 1)
+              }}°</span>
           </div>
           <small>PVGIS</small>
         </div>
       </section>
 
-      <!-- STEP 1: Konum & Alan (full width) -->
-      <section v-if="currentStep === 'location'" class="card location-card-full">
-        <div class="section-head">
-          <p class="section-step">1. Konum ve Alan</p>
-          <h2>Il / ilce arayin, sonra cati veya arazi alanini poligon ile secin</h2>
-        </div>
+      <!-- STEP 1: Konum & Alan -->
+      <StepLocation v-if="currentStep === 'location'"
+                    :can-proceed="canProceedFromLocation"
+                    :location="location"
+                    @next="nextStep"
+                    @location-change="handleLocationChange"
+                    @area-change="handleAreaChange"
+      />
 
-        <ClientOnly>
-          <SolarMapSelector
-              :address="location.address"
-              :area-m2="location.drawnAreaM2"
-              :city-label="location.cityLabel"
-              :lat="location.lat"
-              :lng="location.lng"
-              @area-change="handleAreaChange"
-              @location-change="handleLocationChange"
-          />
-        </ClientOnly>
-
-        <p v-if="!canProceedFromLocation" class="validation-hint">
-          Devam etmek icin adres secin ve haritada alan cizin.
-        </p>
-
-        <div class="wizard-actions">
-          <button
-              class="primary-btn"
-              :disabled="!canProceedFromLocation"
-              type="button"
-              @click="nextStep"
-          >
-            Devam Et
-          </button>
-        </div>
-      </section>
-
-      <div v-if="currentStep === 'details'" class="content-grid">
-        <div class="flow-column">
-          <!-- STEP 2: Bilgiler -->
-          <section class="card">
-            <div class="section-head">
-              <p class="section-step">2. Bilgi Girisi</p>
-              <h2>Hesaplama modunu secin ve bilgilerinizi girin</h2>
-            </div>
-
-            <!-- Mod Secimi -->
-            <UiButtonGroup
-                v-model="form.calculationMode"
-                :options="[{ value: 'simple', label: 'Basit' }, { value: 'advanced', label: 'Gelismis' }]"
-                group-class="mode-toggle"
-            />
-
-            <!-- Abone Grubu -->
-            <div class="field-group">
-              <p class="field-group-title">Abone Grubu</p>
-              <UiButtonGroup v-model="form.subscriberGroup" :options="subscriberGroups" group-class="subscriber-grid" />
-            </div>
-
-            <!-- Tarife Bilgisi -->
-            <div class="tariff-info">
-              <p class="tariff-info-title">Guncel Tarife ({{ currentTariff.label }})</p>
-              <div class="tariff-inline">
-                <span>Birim fiyat:</span>
-                <UiFormInput v-model="form.electricityBuyPrice" :inline="true" :min="0" :step="0.01" suffix="TL/kWh" />
-                <span>Satis fiyati:</span>
-                <UiFormInput v-model="form.electricitySellPrice" :inline="true" :min="0" :step="0.01" suffix="TL/kWh" />
-              </div>
-            </div>
-
-            <!-- Cati Cephesi -->
-            <div class="field-group">
-              <p class="field-group-title">Cati Cephesi</p>
-              <UiButtonGroup v-model="form.roofDirection" :options="roofDirections" group-class="direction-grid" />
-            </div>
-
-            <!-- Cati Tipi -->
-            <div class="field-group">
-              <p class="field-group-title">Cati Tipi</p>
-              <UiButtonGroup v-model="form.roofType" :options="roofOptionsFormatted" group-class="roof-type-grid" />
-              <div style="margin-top: 0.5rem;">
-                <UiFormInput
-                    v-model="form.coverageFactor"
-                    type="range"
-                    :label="`Cati Kaplama Orani (${form.roofType})`"
-                    :min="0.30"
-                    :max="0.95"
-                    :step="0.01"
-                    :format="(v) => `%${number(v * 100, 0)}`"
-                />
-              </div>
-            </div>
-
-            <!-- Aylik Elektrik Faturasi -->
-            <div class="field-group">
-              <UiFormInput v-model="form.monthlyBill" type="range" label="Aylik Elektrik Faturasi" :min="500" :max="50000" :step="100" :format="currency" />
-            </div>
-
-            <!-- Cati Acisi -->
-            <div class="field-group">
-              <UiFormInput v-model="form.roofAngle" type="range" label="Cati Acisi" :min="0" :max="45" :step="1" suffix="°" />
-            </div>
-
-            <!-- Kurulum Tipi -->
-            <div class="field-group">
-              <p class="field-group-title">Kurulum Tipi</p>
-              <UiButtonGroup v-model="form.mountingPlace" :options="mountingOptions" group-class="mounting-toggle" />
-            </div>
-
-            <!-- Checkboxlar -->
-            <div class="field-group">
-              <UiFormInput v-model="form.coverFullBill" type="checkbox" label="Faturanin tamamini karsilamak istiyorum" />
-              <UiFormInput v-model="form.coverFullRoof" type="checkbox" label="Catimin tamamini kaplamak istiyorum" />
-            </div>
-
-            <!-- Gelismis Mod -->
-            <template v-if="form.calculationMode === 'advanced'">
-              <div class="field-group">
-                <p class="field-group-title">Gunes Paneli</p>
-                <UiButtonGroup v-model="form.selectedPanel" :options="panelOptionsFormatted" group-class="panel-grid" @update:model-value="selectPanel" />
-              </div>
-
-              <div class="advanced-fields">
-                <UiFormInput v-model="form.electricityBuyPrice" label="Elektrik Alis Fiyati (TL/kWh)" :min="0" :step="0.01" />
-                <UiFormInput v-model="form.electricitySellPrice" label="Elektrik Satis Fiyati (TL/kWh)" :min="0" :step="0.01" />
-                <UiFormInput v-model="form.annualEscalationRate" label="Yillik Elektrik Zam Orani (%)" :min="0" :max="50" :step="1" />
-                <UiFormInput v-model="form.yearlyConsumption" label="Yillik Elektrik Tuketimi (kWh)" :min="0" :step="100" placeholder="Bos birakilirsa faturadan hesaplanir" />
-                <UiFormInput v-model="form.monthlyBill" label="Aylik Fatura Tutari (TL)" :min="1" :step="100" />
-                <UiFormInput v-model="form.electricityPrice" label="Elektrik Birim Fiyati (TL/kWh)" :min="0.1" :step="0.1" />
-              </div>
-
-              <div class="advanced-toggle">
-                <button class="text-btn" type="button" @click="showAdvanced = !showAdvanced">
-                  {{ showAdvanced ? 'Teknik ayarlari gizle' : 'Teknik ayarlar' }}
-                </button>
-              </div>
-
-              <div v-if="showAdvanced" class="form-grid advanced-grid">
-                <UiFormInput v-model="form.panelArea" label="Panel alani (m2)" :min="2" :step="0.1" />
-                <UiFormInput v-model="form.inverterEfficiency" label="Inverter verimi (%)" :min="90" :max="100" :step="1" />
-                <UiFormInput v-model="form.systemLoss" label="Sistem kaybi (%)" :min="0" :max="30" :step="1" />
-                <UiFormInput v-model="form.annualDegradation" label="Yillik degradasyon (%)" :min="0" :max="3" :step="0.1" />
-                <UiFormInput v-model="form.installationCostPerKw" label="Kurulum maliyeti (TL/kWp)" :min="10000" :step="500" />
-              </div>
-            </template>
-
-            <div class="assumption-strip">
-              <div class="mini-stat">
-                <span>Secilen alan</span>
-                <strong>{{ number(form.drawnAreaM2, 1) }} m2</strong>
-              </div>
-              <div class="mini-stat">
-                <span>Kullanilabilir alan katsayisi</span>
-                <strong>x{{ number(form.coverageFactor, 2) }}</strong>
-              </div>
-              <div class="mini-stat">
-                <span>Turetilen tuketim</span>
-                <strong>{{ number(monthlyConsumptionDerived) }} kWh/ay</strong>
-              </div>
-            </div>
-          </section>
-
-
-          <div class="wizard-actions">
-            <button
-                class="secondary-btn"
-                type="button"
-                @click="previousStep"
-            >
-              Geri
-            </button>
-          </div>
-        </div>
-
-        <!-- Sag sidebar: PVGIS sonuclari (step 2 ve 3'te gorunur) -->
-        <aside class="results-column">
-          <section class="card sticky-card">
-            <div class="section-head">
-              <p class="section-step">PVGIS Fizibilite Sonuclari</p>
-              <h2>Detayli hesaplama</h2>
-            </div>
-
-            <div v-if="isCalculating" class="loading-state">
-              PVGIS verisi aliniyor...
-            </div>
-
-            <div v-else-if="calculationError" class="error-state">
-              {{ calculationError }}
-            </div>
-
-            <div v-else-if="!result" class="empty-state">
-              Veriler girildikce PVGIS hesabi otomatik yapilacak.
-            </div>
-
-            <template v-else>
-              <div class="result-grid one-col">
-                <div class="result-tile">
-                  <span>PVGIS yillik verim</span>
-                  <strong>{{ number(result.pvYield) }} kWh/kWp-yil</strong>
-                  <small>{{ result.cityLabel }}</small>
-                </div>
-                <div class="result-tile">
-                  <span>Kurulabilir sistem gucu</span>
-                  <strong>{{ number(result.feasibleSystemSizeKw, 2) }} kWp</strong>
-                  <small>Onerilen: {{ number(result.recommendedSystemSizeKw, 2) }} kWp</small>
-                </div>
-                <div class="result-tile">
-                  <span>Panel sayisi</span>
-                  <strong>{{ number(result.panelCount) }}</strong>
-                  <small>Alan kapasitesi: {{ number(result.areaLimitedPanelCount) }} panel</small>
-                </div>
-                <div class="result-tile">
-                  <span>Yillik uretim</span>
-                  <strong>{{ number(result.yearlyProduction) }} kWh</strong>
-                  <small>Aylik ort. {{ number(result.monthlyAverageProduction) }} kWh</small>
-                </div>
-                <div class="result-tile">
-                  <span>Yillik tasarruf</span>
-                  <strong>{{ currency(result.yearlySavings) }}</strong>
-                  <small class="savings-breakdown">
-                    Oztuketim: {{ currency(result.savingsBreakdown.selfConsumptionSaving) }}
-                    + Satis: {{ currency(result.savingsBreakdown.exportIncome) }}
-                  </small>
-                </div>
-                <div class="result-tile">
-                  <span>Kurulum maliyeti</span>
-                  <strong>{{ currency(result.installationCost) }}</strong>
-                </div>
-                <div class="result-tile">
-                  <span>Geri donus suresi</span>
-                  <strong>{{ number(result.paybackYears, 1) }} yil</strong>
-                  <small>%{{ form.annualEscalationRate }} yillik zam ile</small>
-                </div>
-                <div class="result-tile">
-                  <span>Tuketim karsilama</span>
-                  <strong>%{{ number(result.selfSufficiencyRate, 1) }}</strong>
-                </div>
-                <div v-if="result.optimalAngle !== null" class="result-tile">
-                  <span>PVGIS Optimal Aci</span>
-                  <strong>{{ number(result.optimalAngle, 1) }}°</strong>
-                  <small v-if="result.optimalAspect !== null">Azimuth: {{ number(result.optimalAspect, 1) }}°</small>
-                </div>
-              </div>
-
-              <!-- Aylik uretim chart -->
-              <div class="chart-card" style="margin-top: 18px;">
-                <div class="chart-head">
-                  <strong>Aylik uretim vs tuketim</strong>
-                </div>
-                <div class="bars">
-                  <div v-for="item in result.monthlySeries" :key="item.month" class="bar-group">
-                    <div class="bar-track">
-                      <div
-                          class="bar production"
-                          :style="{ height: `${(item.production / maxMonthlyProduction) * 100}%` }"
-                      />
-                    </div>
-                    <div class="bar-track muted">
-                      <div
-                          class="bar consumption"
-                          :style="{ height: `${(item.consumption / maxMonthlyConsumption) * 100}%` }"
-                      />
-                    </div>
-                    <small>{{ item.month }}</small>
-                  </div>
-                </div>
-              </div>
-            </template>
-
-            <div class="note-box" style="margin-top: 14px;">
-              <p>Bu hesaplama on fizibilite amaclidir.</p>
-            </div>
-          </section>
-        </aside>
-      </div>
+      <!-- STEP 2: Bilgiler & Sonuc -->
+      <StepDetails v-if="currentStep === 'details'"
+                   :calculation-error="calculationError"
+                   :form="form"
+                   :is-calculating="isCalculating"
+                   :result="result"
+                   @previous="previousStep"
+      />
     </section>
   </main>
 </template>
 
 <script setup>
-import {
-  defaultOnGridForm,
-  mountingOptions,
-  panelOptions,
-  roofDirections,
-  roofOptions,
-  subscriberGroups,
-} from '~/data/on-grid'
-import { tariffs } from '~/data/tariffs'
+import { defaultOnGridForm, roofOptions } from '~/data/on-grid'
+import StepLocation from './components/StepLocation.vue'
+import StepDetails from './components/StepDetails.vue'
 
 useHead({
   title: 'Solarify | On-Grid Fizibilite',
@@ -382,7 +124,6 @@ const currentStep = ref('location')
 const result = ref(null)
 const isCalculating = ref(false)
 const calculationError = ref('')
-const showAdvanced = ref(true)
 const locationSummary = ref(null)
 const isLoadingSummary = ref(false)
 
@@ -391,6 +132,14 @@ const steps = [
   { key: 'details', title: 'Bilgiler & Sonuc', summary: 'Bilgi gir, PVGIS sonuclarini gor' },
 ]
 
+const activeStepIndex = computed(() => steps.findIndex((step) => step.key === currentStep.value))
+const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[0])
+const canProceedFromLocation = computed(() => hasValidLocation.value)
+
+const canGoToResults = computed(
+    () => canProceedFromLocation.value && form.monthlyBill > 0 && form.electricityPrice > 0,
+)
+
 // Sync shared location into form
 watchEffect(() => {
   form.address = location.value.address
@@ -398,98 +147,52 @@ watchEffect(() => {
   form.lat = location.value.lat
   form.lng = location.value.lng
   form.drawnAreaM2 = location.value.drawnAreaM2
-  console.log('[LOCATION → FORM] Konum form\'a senkronize edildi:', {
-    address: form.address,
-    cityLabel: form.cityLabel,
-    lat: form.lat,
-    lng: form.lng,
-    drawnAreaM2: form.drawnAreaM2,
-  })
 })
 
-// Abone grubu degisince tarife fiyatlarini guncelle
-const currentTariff = computed(() => tariffs[form.subscriberGroup])
-
+// Cati tipi degisince coverage factor guncelle
 watch(
-  () => form.subscriberGroup,
-  (group) => {
-    const t = tariffs[group]
-    if (!t) return
-    console.log('[TARIFE] Abone grubu değişti →', {
-      group,
-      label: t.label,
-      unitPrice: t.unitPrice,
-      sellPrice: t.sellPrice,
-    })
-    form.electricityBuyPrice = t.unitPrice
-    form.electricitySellPrice = t.sellPrice
-    form.electricityPrice = t.unitPrice
-    console.log('[TARIFE → FORM] Form güncellendi:', {
-      electricityBuyPrice: form.electricityBuyPrice,
-      electricitySellPrice: form.electricitySellPrice,
-      electricityPrice: form.electricityPrice,
-    })
-  },
+    () => form.roofType,
+    (type) => {
+      const roof = roofOptions.find((r) => r.value === type)
+      if (roof) form.coverageFactor = roof.coverageFactor
+    },
 )
 
-watch(
-  () => form.roofType,
-  (type) => {
-    const roof = roofOptions.find((r) => r.value === type)
-    if (roof) form.coverageFactor = roof.coverageFactor
-  },
-)
+// --- Formatters ---
+const currency = (value) =>
+    new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency: 'TRY',
+      maximumFractionDigits: 0,
+    }).format(value)
 
-const selectPanel = (panelValue) => {
-  form.selectedPanel = panelValue
-  const panel = panelOptions.find((p) => p.value === panelValue)
-  if (panel) {
-    form.panelPower = panel.power
-    form.panelArea = panel.area
-  }
-}
+const number = (value, digits = 0) =>
+    new Intl.NumberFormat('tr-TR', {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(value)
 
-const roofOptionsFormatted = computed(() =>
-  roofOptions.map((o) => ({ ...o, description: `Kaplama: %${Math.round(o.coverageFactor * 100)}` })),
-)
-const panelOptionsFormatted = computed(() =>
-  panelOptions.map((p) => ({ ...p, description: `${p.power}Wp / ${p.area} m2` })),
-)
-
-const activeStepIndex = computed(() => steps.findIndex((step) => step.key === currentStep.value))
-const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[0])
+// --- Live Estimate ---
 const monthlyConsumptionDerived = computed(() =>
-  form.monthlyConsumption && form.monthlyConsumption > 0
-    ? form.monthlyConsumption
-    : form.monthlyBill / Math.max(form.electricityPrice, 0.01),
-)
-
-const canProceedFromLocation = computed(() => hasValidLocation.value)
-
-const canGoToResults = computed(
-  () => canProceedFromLocation.value && form.monthlyBill > 0 && form.electricityPrice > 0,
+    form.monthlyConsumption && form.monthlyConsumption > 0
+        ? form.monthlyConsumption
+        : form.monthlyBill / Math.max(form.electricityPrice, 0.01),
 )
 
 const liveEstimate = computed(() => {
   const pvYield = result.value?.pvYield ?? 1400
   const usableArea = form.drawnAreaM2 * (form.coverageFactor ?? roofMeta.value.coverageFactor ?? 0.84)
-  const areaLimitedPeakPower = form.panelArea > 0
-    ? (Math.floor(usableArea / form.panelArea) * form.panelPower) / 1000
-    : 0
   const yearlyConsumption = monthlyConsumptionDerived.value * 12
   const recommendedSizeKw = pvYield > 0 ? yearlyConsumption / pvYield : 0
-
   const maxPanels = form.panelArea > 0 ? Math.floor(usableArea / form.panelArea) : 0
 
   let panelCount
   if (form.coverFullBill) {
-    // Fatura bazlı: tüketimi karşılayacak kadar, alan sınırını aşmadan
     const billPanels = form.panelPower > 0
-      ? Math.ceil((recommendedSizeKw * 1000) / form.panelPower)
-      : 0
+        ? Math.ceil((recommendedSizeKw * 1000) / form.panelPower)
+        : 0
     panelCount = Math.min(billPanels, maxPanels)
   } else {
-    // Varsayılan: alana sığan panel sayısı (on-grid'de fazla üretim şebekeye satılır)
     panelCount = maxPanels
   }
   panelCount = Math.max(panelCount, usableArea > 0 ? 1 : 0)
@@ -505,29 +208,73 @@ const liveEstimate = computed(() => {
   return { panelCount, systemSizeKw, yearlyProduction, yearlySavings, installationCost, paybackYears }
 })
 
-const maxMonthlyProduction = computed(() =>
-  Math.max(...(result.value?.monthlySeries.map((entry) => entry.production) ?? [1]), 1),
-)
-const maxMonthlyConsumption = computed(() =>
-  Math.max(...(result.value?.monthlySeries.map((entry) => entry.consumption) ?? [1]), 1),
-)
-const currency = (value) =>
-  new Intl.NumberFormat('tr-TR', {
-    style: 'currency',
-    currency: 'TRY',
-    maximumFractionDigits: 0,
-  }).format(value)
+// --- Step Navigation ---
+const nextStep = () => {
+  const index = activeStepIndex.value
+  const next = steps[index + 1]
+  if (!next) return
+  if (currentStep.value === 'location' && !canProceedFromLocation.value) return
+  currentStep.value = next.key
+}
 
-const number = (value, digits = 0) =>
-  new Intl.NumberFormat('tr-TR', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(value)
+const previousStep = () => {
+  const index = activeStepIndex.value
+  const prev = steps[index - 1]
+  if (prev) currentStep.value = prev.key
+}
 
-const runCalculation = async () => {
-  if (!canGoToResults.value || form.lat === null || form.lng === null) {
-    return false
+const jumpToStep = (step) => {
+  currentStep.value = step
+}
+
+// --- Location Summary ---
+const fetchLocationSummary = async(lat, lng) => {
+  const useLat = lat ?? form.lat
+  const useLng = lng ?? form.lng
+  if (!useLat || !useLng) return
+  locationSummary.value = null
+  isLoadingSummary.value = true
+  try {
+    const q = { lat: useLat, lng: useLng }
+    if (form.roofDirection) q.roofDirection = form.roofDirection
+    if (form.roofAngle !== undefined && form.roofAngle !== null) q.roofAngle = form.roofAngle
+    locationSummary.value = await $fetch('/api/solar/location-summary', { query: q })
+  } catch (e) {
+    console.warn('[LOCATION SUMMARY] Veri alinamadi:', e.message)
+    locationSummary.value = null
+  } finally {
+    isLoadingSummary.value = false
   }
+}
+
+let summaryTimer = null
+const debouncedFetchSummary = () => {
+  if (summaryTimer) clearTimeout(summaryTimer)
+  summaryTimer = setTimeout(() => fetchLocationSummary(), 600)
+}
+
+const handleLocationChange = (payload) => {
+  setLocation(payload)
+  fetchLocationSummary(payload.lat, payload.lng)
+}
+
+const handleAreaChange = (areaM2) => {
+  setArea(areaM2)
+}
+
+// Cephe veya aci degisince summary'yi guncelle
+watch(
+    [() => form.roofDirection, () => form.roofAngle],
+    () => {
+      if (form.lat && form.lng) debouncedFetchSummary()
+    },
+)
+
+// --- Debounced auto-calculation ---
+let autoCalcTimer = null
+
+const runCalculation = async() => {
+  if (!canGoToResults.value || form.lat === null || form.lng === null) return false
 
   isCalculating.value = true
   calculationError.value = ''
@@ -555,125 +302,54 @@ const runCalculation = async () => {
       coverFullBill: form.coverFullBill ? '1' : '',
       coverFullRoof: form.coverFullRoof ? '1' : '',
       coverageFactor: form.coverageFactor,
+      electricityBuyPrice: form.electricityBuyPrice,
+      electricitySellPrice: form.electricitySellPrice,
+      annualEscalationRate: form.annualEscalationRate,
+      subscriberGroup: form.subscriberGroup,
     }
 
-    queryParams.electricityBuyPrice = form.electricityBuyPrice
-    queryParams.electricitySellPrice = form.electricitySellPrice
-    queryParams.annualEscalationRate = form.annualEscalationRate
-    queryParams.subscriberGroup = form.subscriberGroup
-
-    result.value = await $fetch('/api/solar/calculate', {
-      query: queryParams,
-    })
-
+    result.value = await $fetch('/api/solar/calculate', { query: queryParams })
     return true
   } catch (error) {
     calculationError.value =
-      error instanceof Error ? error.message : 'Hesaplama yapilirken bir sorun olustu.'
+        error instanceof Error ? error.message : 'Hesaplama yapilirken bir sorun olustu.'
     return false
   } finally {
     isCalculating.value = false
   }
 }
 
-const nextStep = () => {
-  const index = activeStepIndex.value
-  const next = steps[index + 1]
-  if (!next) return
-  if (currentStep.value === 'location' && !canProceedFromLocation.value) return
-  currentStep.value = next.key
-}
-
-const previousStep = () => {
-  const index = activeStepIndex.value
-  const prev = steps[index - 1]
-  if (prev) {
-    currentStep.value = prev.key
-  }
-}
-
-const jumpToStep = (step) => {
-  currentStep.value = step
-}
-
-const fetchLocationSummary = async (lat, lng) => {
-  const useLat = lat ?? form.lat
-  const useLng = lng ?? form.lng
-  if (!useLat || !useLng) return
-  locationSummary.value = null
-  isLoadingSummary.value = true
-  try {
-    const q = { lat: useLat, lng: useLng }
-    if (form.roofDirection) q.roofDirection = form.roofDirection
-    if (form.roofAngle !== undefined && form.roofAngle !== null) q.roofAngle = form.roofAngle
-    locationSummary.value = await $fetch('/api/solar/location-summary', { query: q })
-  } catch (e) {
-    console.warn('[LOCATION SUMMARY] Veri alinamadi:', e.message)
-    locationSummary.value = null
-  } finally {
-    isLoadingSummary.value = false
-  }
-}
-
-let summaryTimer = null
-const debouncedFetchSummary = () => {
-  if (summaryTimer) clearTimeout(summaryTimer)
-  summaryTimer = setTimeout(() => fetchLocationSummary(), 600)
-}
-
-const handleLocationChange = (payload) => {
-  console.log('[LOCATION] İl seçildi → payload:', JSON.parse(JSON.stringify(payload)))
-  setLocation(payload)
-  fetchLocationSummary(payload.lat, payload.lng)
-}
-
-// Cephe veya aci degisince summary'yi guncelle
 watch(
-  [() => form.roofDirection, () => form.roofAngle],
-  () => {
-    if (form.lat && form.lng) debouncedFetchSummary()
-  },
-)
-
-const handleAreaChange = (areaM2) => {
-  setArea(areaM2)
-}
-
-// --- Debounced auto-calculation ---
-let autoCalcTimer = null
-
-watch(
-  [
-    () => form.monthlyBill,
-    () => form.electricityPrice,
-    () => form.electricityBuyPrice,
-    () => form.electricitySellPrice,
-    () => form.roofType,
-    () => form.roofAngle,
-    () => form.roofDirection,
-    () => form.mountingPlace,
-    () => form.subscriberGroup,
-    () => form.panelPower,
-    () => form.panelArea,
-    () => form.coverFullBill,
-    () => form.coverFullRoof,
-    () => form.drawnAreaM2,
-    () => form.lat,
-    () => form.lng,
-    () => form.annualEscalationRate,
-    () => form.systemLoss,
-    () => form.annualDegradation,
-    () => form.installationCostPerKw,
-    () => form.inverterEfficiency,
-    () => form.coverageFactor,
-  ],
-  () => {
-    if (!canGoToResults.value) return
-
-    if (autoCalcTimer) clearTimeout(autoCalcTimer)
-    autoCalcTimer = setTimeout(async () => {
-      await runCalculation()
-    }, 1500)
-  },
+    [
+      () => form.monthlyBill,
+      () => form.electricityPrice,
+      () => form.electricityBuyPrice,
+      () => form.electricitySellPrice,
+      () => form.roofType,
+      () => form.roofAngle,
+      () => form.roofDirection,
+      () => form.mountingPlace,
+      () => form.subscriberGroup,
+      () => form.panelPower,
+      () => form.panelArea,
+      () => form.coverFullBill,
+      () => form.coverFullRoof,
+      () => form.drawnAreaM2,
+      () => form.lat,
+      () => form.lng,
+      () => form.annualEscalationRate,
+      () => form.systemLoss,
+      () => form.annualDegradation,
+      () => form.installationCostPerKw,
+      () => form.inverterEfficiency,
+      () => form.coverageFactor,
+    ],
+    () => {
+      if (!canGoToResults.value) return
+      if (autoCalcTimer) clearTimeout(autoCalcTimer)
+      autoCalcTimer = setTimeout(async() => {
+        await runCalculation()
+      }, 1500)
+    },
 )
 </script>
