@@ -29,6 +29,16 @@
         <div class="field-group">
           <p class="field-group-title">Cati Tipi</p>
           <UiButtonGroup v-model="form.roofType" :options="roofOptionsFormatted" group-class="roof-type-grid" />
+          <div style="margin-top: 0.5rem;">
+            <UiFormInput v-model="form.coverageFactor"
+                         :format="(v) => `%${number(v * 100, 0)}`"
+                         :label="`Cati Kaplama Orani (${form.roofType})`"
+                         :max="0.95"
+                         :min="0.30"
+                         :step="0.01"
+                         type="range"
+            />
+          </div>
         </div>
       </section>
 

@@ -33,6 +33,7 @@ export const defaultOffGridForm = () => ({
   roofAngle: 30,
   roofDirection: 'south',
   roofType: 'sandwich',
+  coverageFactor: 0.84,
   appliances: [
     { id: crypto.randomUUID(), type: 'led-bulb', dayHours: 4, nightHours: 4 },
     { id: crypto.randomUUID(), type: 'fridge', dayHours: 12, nightHours: 12 },

@@ -27,7 +27,7 @@
       <!-- STEP 1: Konum & Alan -->
       <StepLocation v-if="currentStep === 'location'"
                     :can-proceed="canProceedFromLocation"
-                    :coverage-factor="coverageFactor"
+                    :coverage-factor="form.coverageFactor"
                     :location="location"
                     :panel-area="form.panelArea"
                     :panel-label="currentPanelLabel"
@@ -84,15 +84,19 @@ const steps = [
 const activeStepIndex = computed(() => steps.findIndex((step) => step.key === currentStep.value))
 const canProceedFromLocation = computed(() => hasValidLocation.value)
 
-const coverageFactor = computed(() => {
-  const roof = roofOptions.find((r) => r.value === form.roofType)
-  return roof?.coverageFactor ?? 0.84
-})
-
 const currentPanelLabel = computed(() => {
   const panel = panelOptions.find((p) => p.value === form.selectedPanel)
   return panel ? `${panel.label} ${panel.power}Wp` : ''
 })
+
+// Cati tipi degisince coverage factor guncelle
+watch(
+    () => form.roofType,
+    (type) => {
+      const roof = roofOptions.find((r) => r.value === type)
+      if (roof) form.coverageFactor = roof.coverageFactor
+    },
+)
 
 // --- Step Navigation ---
 const nextStep = () => {
