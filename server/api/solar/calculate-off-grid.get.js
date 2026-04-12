@@ -26,6 +26,7 @@ export default defineEventHandler(async (event) => {
   const instantaneousConsumptionKw = numberParam(query.instantaneousConsumptionKw, 0)
 
   const roof = roofOptions.find((r) => r.value === roofType) ?? roofOptions[0]
+  const coverageFactor = numberParam(query.coverageFactor, roof.coverageFactor)
   const directionMeta = roofDirections.find((d) => d.value === roofDirection)
   const roofAspects = directionMeta?.aspects ?? [0]
 
@@ -51,7 +52,7 @@ export default defineEventHandler(async (event) => {
   const rawSystemSizeKw = yearlyConsumption / Math.max(pvYield, 1)
   let systemSizeKw = rawSystemSizeKw * 1.3
 
-  const usableAreaM2 = drawnAreaM2 * roof.coverageFactor
+  const usableAreaM2 = drawnAreaM2 * coverageFactor
   const areaLimitedPanelCount = Math.max(1, Math.floor(usableAreaM2 / panelArea))
   const areaLimitedPeakPower = (areaLimitedPanelCount * panelPower) / 1000
 
@@ -62,20 +63,38 @@ export default defineEventHandler(async (event) => {
   systemSizeKw = Math.max(systemSizeKw, 0.5)
 
   const panelCount = Math.max(1, Math.ceil((systemSizeKw * 1000) / panelPower))
+  systemSizeKw = (panelCount * panelPower) / 1000
   const yearlyProduction = systemSizeKw * pvYield
   const efficiency = yearlyConsumption > 0 ? Math.min((yearlyProduction / yearlyConsumption) * 100, 999) : 0
   const areaM2 = panelCount * panelArea
 
-  const batterySizeKwh = nighttimeConsumptionKwh * 3
+  // Batarya: DoD %80, 2 gun otonom
+  const autonomyDays = 2
+  const depthOfDischarge = 0.8
+  const batterySizeKwh = (nighttimeConsumptionKwh * autonomyDays) / depthOfDischarge
 
-  const panelCost = systemSizeKw * 10000
-  const inverterCost = systemSizeKw * 15000
-  const batteryCost = batterySizeKwh * 8000
-  const installationCost = (panelCost + inverterCost + batteryCost) * roof.costMultiplier
+  // Maliyet min/max
+  const panelCostMin = systemSizeKw * 8000
+  const panelCostMax = systemSizeKw * 12000
+  const inverterCostMin = systemSizeKw * 12000
+  const inverterCostMax = systemSizeKw * 18000
+  const batteryCostMin = batterySizeKwh * 6000
+  const batteryCostMax = batterySizeKwh * 10000
+  const costMin = Math.round((panelCostMin + inverterCostMin + batteryCostMin) * roof.costMultiplier)
+  const costMax = Math.round((panelCostMax + inverterCostMax + batteryCostMax) * roof.costMultiplier)
+
+  // CO2 / agac / yol esdegeri
+  const co2OffsetKg = yearlyProduction * 0.42
+  const treeEquivalent = co2OffsetKg / 22
+  const roadEquivalentKm = co2OffsetKg / 0.21
+
+  // Aylik tuketim serisi
+  const monthlyConsumption = dailyConsumptionKwh * 30.44 // ortalama gun/ay
 
   const monthlySeries = pvgisResults[0].monthlySeries.map((item, i) => ({
     month: item.month,
     production: pvgisResults.reduce((sum, r) => sum + r.monthlySeries[i].production, 0) / pvgisResults.length * systemSizeKw,
+    consumption: monthlyConsumption,
   }))
 
   return {
@@ -87,7 +106,11 @@ export default defineEventHandler(async (event) => {
     dailyConsumptionKwh: Math.round(dailyConsumptionKwh * 100) / 100,
     nighttimeConsumptionKwh: Math.round(nighttimeConsumptionKwh * 100) / 100,
     batterySizeKwh: Math.round(batterySizeKwh * 100) / 100,
-    installationCost: Math.round(installationCost),
+    costMin,
+    costMax,
+    co2OffsetKg: Math.round(co2OffsetKg),
+    treeEquivalent: Math.round(treeEquivalent),
+    roadEquivalentKm: Math.round(roadEquivalentKm),
     efficiency: Math.round(efficiency * 10) / 10,
     areaM2: Math.round(areaM2 * 100) / 100,
     monthlySeries,

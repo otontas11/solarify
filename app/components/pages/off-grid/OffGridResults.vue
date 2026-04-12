@@ -47,11 +47,11 @@
           <div class="result-tile">
             <span>Batarya Kapasitesi</span>
             <strong>{{ number(result.batterySizeKwh, 1) }} kWh</strong>
-            <small>3 gun otonom</small>
+            <small>2 gun otonom, %80 DoD</small>
           </div>
           <div class="result-tile">
             <span>Tahmini Maliyet</span>
-            <strong>{{ currency(result.installationCost) }}</strong>
+            <strong>{{ currency(result.costMin) }} — {{ currency(result.costMax) }}</strong>
             <small>Panel + Inverter + Batarya</small>
           </div>
           <div class="result-tile">
@@ -61,6 +61,44 @@
           <div class="result-tile">
             <span>Panel Alani</span>
             <strong>{{ number(result.areaM2, 1) }} m²</strong>
+          </div>
+          <div class="result-tile">
+            <span>CO2 Azaltma</span>
+            <strong>{{ number(result.co2OffsetKg) }} kg/yil</strong>
+          </div>
+          <div class="result-tile">
+            <span>Agac Esdegeri</span>
+            <strong>{{ number(result.treeEquivalent) }} agac</strong>
+            <small>yillik CO2 absorpsiyonu</small>
+          </div>
+          <div class="result-tile">
+            <span>Yol Esdegeri</span>
+            <strong>{{ number(result.roadEquivalentKm) }} km</strong>
+            <small>tasit emisyon karsiligi</small>
+          </div>
+        </div>
+
+        <!-- Aylik uretim vs tuketim chart -->
+        <div class="chart-card" style="margin-top: 18px;">
+          <div class="chart-head">
+            <strong>Aylik uretim vs tuketim</strong>
+          </div>
+          <div class="bars">
+            <div v-for="item in result.monthlySeries" :key="item.month" class="bar-group">
+              <div class="bar-track">
+                <div
+                    :style="{ height: `${(item.production / maxMonthlyProduction) * 100}%` }"
+                    class="bar production"
+                />
+              </div>
+              <div class="bar-track muted">
+                <div
+                    :style="{ height: `${(item.consumption / maxMonthlyConsumption) * 100}%` }"
+                    class="bar consumption"
+                />
+              </div>
+              <small>{{ item.month }}</small>
+            </div>
           </div>
         </div>
       </template>
@@ -73,11 +111,18 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   result: { type: Object, default: null },
   isCalculating: { type: Boolean, default: false },
   calculationError: { type: String, default: '' },
 })
+
+const maxMonthlyProduction = computed(() =>
+    Math.max(...(props.result?.monthlySeries.map((entry) => entry.production) ?? [1]), 1),
+)
+const maxMonthlyConsumption = computed(() =>
+    Math.max(...(props.result?.monthlySeries.map((entry) => entry.consumption) ?? [1]), 1),
+)
 
 const number = (value, digits = 0) =>
     new Intl.NumberFormat('tr-TR', {
