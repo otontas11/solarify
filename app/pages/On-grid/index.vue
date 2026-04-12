@@ -122,38 +122,16 @@
             </div>
 
             <!-- Mod Secimi -->
-            <div class="mode-toggle">
-              <button
-                  type="button"
-                  :class="{ active: form.calculationMode === 'simple' }"
-                  @click="form.calculationMode = 'simple'"
-              >
-                Basit
-              </button>
-              <button
-                  type="button"
-                  :class="{ active: form.calculationMode === 'advanced' }"
-                  @click="form.calculationMode = 'advanced'"
-              >
-                Gelismis
-              </button>
-            </div>
+            <UiButtonGroup
+                v-model="form.calculationMode"
+                :options="[{ value: 'simple', label: 'Basit' }, { value: 'advanced', label: 'Gelismis' }]"
+                group-class="mode-toggle"
+            />
 
             <!-- Abone Grubu -->
             <div class="field-group">
               <p class="field-group-title">Abone Grubu</p>
-              <div class="subscriber-grid">
-                <button
-                    v-for="group in subscriberGroups"
-                    :key="group.value"
-                    type="button"
-                    :class="{ active: form.subscriberGroup === group.value }"
-                    @click="form.subscriberGroup = group.value"
-                >
-                  <span class="subscriber-icon">{{ group.icon }}</span>
-                  <strong>{{ group.label }}</strong>
-                </button>
-              </div>
+              <UiButtonGroup v-model="form.subscriberGroup" :options="subscriberGroups" group-class="subscriber-grid" />
             </div>
 
             <!-- Tarife Bilgisi -->
@@ -170,34 +148,13 @@
             <!-- Cati Cephesi -->
             <div class="field-group">
               <p class="field-group-title">Cati Cephesi</p>
-              <div class="direction-grid">
-                <button
-                    v-for="dir in roofDirections"
-                    :key="dir.value"
-                    type="button"
-                    :class="{ active: form.roofDirection === dir.value }"
-                    @click="form.roofDirection = dir.value"
-                >
-                  {{ dir.label }}
-                </button>
-              </div>
+              <UiButtonGroup v-model="form.roofDirection" :options="roofDirections" group-class="direction-grid" />
             </div>
 
             <!-- Cati Tipi -->
             <div class="field-group">
               <p class="field-group-title">Cati Tipi</p>
-              <div class="roof-type-grid">
-                <button
-                    v-for="option in roofOptions"
-                    :key="option.value"
-                    type="button"
-                    :class="{ active: form.roofType === option.value }"
-                    @click="form.roofType = option.value"
-                >
-                  <strong>{{ option.label }}</strong>
-                  <span>Kaplama: %{{ number(option.coverageFactor * 100, 0) }}</span>
-                </button>
-              </div>
+              <UiButtonGroup v-model="form.roofType" :options="roofOptionsFormatted" group-class="roof-type-grid" />
               <div style="margin-top: 0.5rem;">
                 <UiFormInput
                     v-model="form.coverageFactor"
@@ -224,17 +181,7 @@
             <!-- Kurulum Tipi -->
             <div class="field-group">
               <p class="field-group-title">Kurulum Tipi</p>
-              <div class="mounting-toggle">
-                <button
-                    v-for="opt in mountingOptions"
-                    :key="opt.value"
-                    type="button"
-                    :class="{ active: form.mountingPlace === opt.value }"
-                    @click="form.mountingPlace = opt.value"
-                >
-                  {{ opt.label }}
-                </button>
-              </div>
+              <UiButtonGroup v-model="form.mountingPlace" :options="mountingOptions" group-class="mounting-toggle" />
             </div>
 
             <!-- Checkboxlar -->
@@ -247,18 +194,7 @@
             <template v-if="form.calculationMode === 'advanced'">
               <div class="field-group">
                 <p class="field-group-title">Gunes Paneli</p>
-                <div class="panel-grid">
-                  <button
-                      v-for="panel in panelOptions"
-                      :key="panel.value"
-                      type="button"
-                      :class="{ active: form.selectedPanel === panel.value }"
-                      @click="selectPanel(panel.value)"
-                  >
-                    <strong>{{ panel.label }}</strong>
-                    <span>{{ panel.power }}Wp / {{ panel.area }} m2</span>
-                  </button>
-                </div>
+                <UiButtonGroup v-model="form.selectedPanel" :options="panelOptionsFormatted" group-class="panel-grid" @update:model-value="selectPanel" />
               </div>
 
               <div class="advanced-fields">
@@ -512,6 +448,13 @@ const selectPanel = (panelValue) => {
     form.panelArea = panel.area
   }
 }
+
+const roofOptionsFormatted = computed(() =>
+  roofOptions.map((o) => ({ ...o, description: `Kaplama: %${Math.round(o.coverageFactor * 100)}` })),
+)
+const panelOptionsFormatted = computed(() =>
+  panelOptions.map((p) => ({ ...p, description: `${p.power}Wp / ${p.area} m2` })),
+)
 
 const activeStepIndex = computed(() => steps.findIndex((step) => step.key === currentStep.value))
 const roofMeta = computed(() => roofOptions.find((item) => item.value === form.roofType) ?? roofOptions[0])
