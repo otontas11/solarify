@@ -73,9 +73,9 @@ export default defineEventHandler(async (event) => {
   const batteryCost = batterySizeKwh * 8000
   const installationCost = (panelCost + inverterCost + batteryCost) * roof.costMultiplier
 
-  const monthlySeries = pvgis.monthlySeries.map((item) => ({
+  const monthlySeries = pvgisResults[0].monthlySeries.map((item, i) => ({
     month: item.month,
-    production: item.production * systemSizeKw,
+    production: pvgisResults.reduce((sum, r) => sum + r.monthlySeries[i].production, 0) / pvgisResults.length * systemSizeKw,
   }))
 
   return {
